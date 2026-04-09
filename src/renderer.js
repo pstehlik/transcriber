@@ -12,6 +12,10 @@
   // Elements
   const screenMain = document.getElementById('screen-main');
   const screenConfig = document.getElementById('screen-config');
+  const screenSetup = document.getElementById('screen-setup');
+  const setupMessage = document.getElementById('setup-message');
+  const setupLog = document.getElementById('setup-log');
+  const setupSpinner = document.getElementById('setup-spinner');
   const dropWrapper = document.getElementById('drop-wrapper');
   const dropZone = document.getElementById('drop-zone');
   const btnOpen = document.getElementById('btn-open-file');
@@ -285,6 +289,81 @@
   }
 
   // History
+  const deleteSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+
+  function createDeleteButton(id) {
+    const btn = document.createElement('button');
+    btn.className = 'history-delete';
+    btn.innerHTML = deleteSvg;
+    btn.title = 'Delete';
+    let confirmTimeout;
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.classList.contains('confirming')) {
+        clearTimeout(confirmTimeout);
+        await window.api.deleteTranscription(id);
+        removeHistoryRow(id);
+      } else {
+        btn.classList.add('confirming');
+        btn.innerHTML = '';
+        btn.textContent = 'Really delete?';
+        confirmTimeout = setTimeout(() => {
+          btn.classList.remove('confirming');
+          btn.innerHTML = deleteSvg;
+          btn.title = 'Delete';
+        }, 3000);
+      }
+    });
+    return btn;
+  }
+
+  function removeHistoryRow(id) {
+    const row = document.querySelector(`.history-row[data-id="${id}"]`);
+    if (row) row.remove();
+    delete runTexts[id];
+    delete runLogs[id];
+    delete runStatuses[id];
+    if (selectedRunId === id) {
+      selectedRunId = null;
+      showTranscriptionText('');
+      logEntries.innerHTML = '';
+      updateStatusDisplay('idle');
+      fileMeta.classList.add('hidden');
+    }
+    if (!document.querySelector('.history-row')) {
+      historyEmpty.style.display = '';
+    }
+  }
+
+  // Delete all history
+  const btnDeleteAll = document.getElementById('btn-delete-all');
+  let deleteAllTimeout;
+  btnDeleteAll.addEventListener('click', async () => {
+    if (btnDeleteAll.classList.contains('confirming')) {
+      clearTimeout(deleteAllTimeout);
+      await window.api.deleteAllTranscriptions();
+      document.querySelectorAll('.history-row').forEach(r => r.remove());
+      runTexts = {};
+      runLogs = {};
+      runStatuses = {};
+      selectedRunId = null;
+      showTranscriptionText('');
+      logEntries.innerHTML = '';
+      updateStatusDisplay('idle');
+      fileMeta.classList.add('hidden');
+      historyEmpty.style.display = '';
+      btnDeleteAll.classList.remove('confirming');
+      btnDeleteAll.textContent = 'Delete all history';
+    } else {
+      btnDeleteAll.classList.add('confirming');
+      btnDeleteAll.textContent = 'Really delete all history?';
+      deleteAllTimeout = setTimeout(() => {
+        btnDeleteAll.classList.remove('confirming');
+        btnDeleteAll.textContent = 'Delete all history';
+      }, 3000);
+    }
+  });
+
   function addHistoryRow(id, timestamp, preview, fileName, status) {
     historyEmpty.style.display = 'none';
     const row = document.createElement('div');
@@ -295,6 +374,7 @@
       `<span class="history-ts">${timestamp}</span>` +
       `<span class="history-preview">${escapeHtml(preview) || 'Transcribing...'}</span>` +
       `<span class="history-file">${escapeHtml(fileName)}</span>`;
+    row.appendChild(createDeleteButton(id));
     row.addEventListener('click', () => selectRun(id));
     historyList.insertBefore(row, historyList.firstChild);
   }
@@ -332,13 +412,48 @@
     return div.innerHTML;
   }
 
+  // Setup screen (first launch)
+  function showSetupScreen() {
+    return new Promise((resolve) => {
+      screenMain.classList.remove('active');
+      screenSetup.classList.add('active');
+
+      window.api.onSetupProgress((message) => {
+        setupMessage.textContent = message;
+        const entry = document.createElement('div');
+        entry.textContent = message;
+        setupLog.appendChild(entry);
+        setupLog.scrollTop = setupLog.scrollHeight;
+      });
+
+      window.api.runSetup().then((result) => {
+        if (result.success) {
+          setupMessage.textContent = 'Ready!';
+          setupSpinner.classList.add('done');
+          setTimeout(() => {
+            screenSetup.classList.remove('active');
+            screenMain.classList.add('active');
+            resolve();
+          }, 800);
+        } else {
+          setupMessage.textContent = 'Setup failed';
+          setupSpinner.style.display = 'none';
+          document.getElementById('setup-error').classList.add('visible');
+          document.getElementById('setup-error-detail').textContent = result.error;
+        }
+      });
+    });
+  }
+
   // Load history on startup
   async function init() {
-    // Check mlx_whisper
-    const check = await window.api.checkMlxWhisper();
-    if (!check.installed) {
-      startupBanner.innerHTML = `<strong>mlx_whisper not found.</strong> ${escapeHtml(check.message)}`;
-      startupBanner.classList.add('visible');
+    // Check if setup is needed (no venv and no system mlx_whisper)
+    const setupComplete = await window.api.checkSetupComplete();
+    if (!setupComplete) {
+      const check = await window.api.checkMlxWhisper();
+      if (!check.installed) {
+        await showSetupScreen();
+      }
     }
 
     // Load config
@@ -365,6 +480,7 @@
           `<span class="history-ts">${t.created_at}</span>` +
           `<span class="history-preview">${escapeHtml((t.text || '').slice(0, 200)) || '(empty)'}</span>` +
           `<span class="history-file">${escapeHtml(t.file_name)}</span>`;
+        row.appendChild(createDeleteButton(t.id));
         row.addEventListener('click', () => selectRun(t.id));
         historyList.appendChild(row);
       }

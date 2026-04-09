@@ -95,6 +95,18 @@ function zipRow(cols, vals) {
   return obj;
 }
 
+async function deleteTranscription(dbPath, id) {
+  const d = await getDb(dbPath);
+  d.run('DELETE FROM transcriptions WHERE id = ?', [id]);
+  save();
+}
+
+async function deleteAllTranscriptions(dbPath) {
+  const d = await getDb(dbPath);
+  d.run('DELETE FROM transcriptions');
+  save();
+}
+
 async function hasTranscriptionForPath(dbPath, filePath) {
   const d = await getDb(dbPath);
   const result = d.exec('SELECT COUNT(*) FROM transcriptions WHERE file_path = ?', [filePath]);
@@ -118,5 +130,7 @@ module.exports = {
   getTranscription,
   getAllTranscriptions,
   hasTranscriptionForPath,
+  deleteTranscription,
+  deleteAllTranscriptions,
   close,
 };

@@ -5,3 +5,6 @@ test/test_config/
 .DS_Store
 # mlx_whisper output files
 *.txt
+
+# electron-builder output
+dist/

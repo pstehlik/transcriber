@@ -4,16 +4,30 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --mac",
     "test": "vitest run",
     "test:e2e": "electron test/e2e-smoke.js",
     "test:launch": "bash test/smoke-launch.sh",
     "test:all": "npm test && npm run test:e2e && npm run test:launch"
+  },
+  "build": {
+    "appId": "com.pstehlik.transcriber",
+    "productName": "Transcriber",
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "identity": null
+    },
+    "dmg": {
+      "title": "Transcriber"
+    }
   },
   "author": "Philip <p@pstehlik.com>",
   "license": "ISC",
   "description": "Local audio transcription app using MLX Whisper",
   "devDependencies": {
     "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
     "vitest": "^3.1.1"
   },
   "dependencies": {

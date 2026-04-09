@@ -13,6 +13,25 @@
   <!-- Startup warning banner (hidden by default) -->
   <div class="startup-banner" id="startup-banner"></div>
 
+  <!-- SCREEN: SETUP (first launch) -->
+  <div id="screen-setup" class="screen">
+    <div class="setup-drag-region"></div>
+    <div class="setup-container">
+      <div class="setup-icon">&#x1F4E2;</div>
+      <h1 class="setup-title">Transcriber</h1>
+      <p class="setup-subtitle">Setting up local transcription...</p>
+      <div class="setup-progress">
+        <div class="setup-spinner" id="setup-spinner"><div class="spinner"></div></div>
+        <div class="setup-message" id="setup-message">Preparing...</div>
+      </div>
+      <div class="setup-log" id="setup-log"></div>
+      <p class="setup-note">Installs MLX Whisper for private, on-device transcription.<br>No data leaves your Mac. This takes 1&ndash;3 minutes.<br><br>Requires Apple Silicon (M1+) and macOS 14 Sonoma or later.</p>
+      <div class="setup-error" id="setup-error">
+        <pre id="setup-error-detail"></pre>
+      </div>
+    </div>
+  </div>
+
   <!-- SCREEN 1: MAIN -->
   <div id="screen-main" class="screen active">
 
@@ -46,14 +65,20 @@
           <div class="drop-zone-disabled">Max parallel runs reached.<br>Please wait...</div>
         </div>
 
-        <button class="btn-open" id="btn-open-file">Open File</button>
+        <button class="btn-open" id="btn-open-file">Open Audio File</button>
 
         <div class="watch-toggle">
           <label class="toggle-switch">
             <input type="checkbox" id="watch-toggle-input">
             <span class="toggle-slider"></span>
           </label>
-          <label class="watch-label" for="watch-toggle-input">Watch Downloads &amp; Documents for voice messages</label>
+          <span class="watch-label-row">
+            <label class="watch-label" for="watch-toggle-input">Watch Downloads &amp; Documents for voice messages</label>
+            <span class="watch-info" id="watch-info" tabindex="0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span class="watch-tooltip">When enabled, Transcriber monitors your Downloads and Documents folders for voice messages saved from WhatsApp, Telegram, or Signal. Any new voice message file saved to either folder is automatically picked up and transcribed &mdash; no drag-and-drop needed.</span>
+            </span>
+          </span>
         </div>
 
         <div class="file-meta hidden" id="file-meta">
@@ -114,7 +139,10 @@
 
     <!-- History Panel -->
     <div class="history-panel">
-      <div class="history-header">History</div>
+      <div class="history-header">
+        <span>History</span>
+        <button class="btn-delete-all" id="btn-delete-all">Delete all history</button>
+      </div>
       <div class="history-list" id="history-list">
         <div class="history-empty" id="history-empty">No transcriptions yet. Drop an audio file to get started.</div>
       </div>

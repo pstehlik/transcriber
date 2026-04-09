@@ -1,8 +1,15 @@
 const { spawn, execFile } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const setup = require('./setup');
 
 const activeRuns = new Map();
 
 function checkInstalled() {
+  const venvMlx = path.join(setup.getVenvBinPath(), 'mlx_whisper');
+  if (fs.existsSync(venvMlx)) {
+    return Promise.resolve({ installed: true, path: venvMlx });
+  }
   return new Promise((resolve) => {
     execFile('which', ['mlx_whisper'], (err, stdout) => {
       if (err || !stdout.trim()) {
@@ -28,9 +35,15 @@ function startTranscription(id, filePath, command, callbacks) {
 
   onLog?.('info', `Starting: ${cmd} ${args.join(' ')}`);
 
-  const proc = spawn(cmd, args, {
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
-  });
+  const env = { ...process.env, PYTHONUNBUFFERED: '1' };
+  // macOS GUI apps have a minimal PATH; add common tool locations for ffmpeg etc.
+  const extraPaths = ['/opt/homebrew/bin', '/usr/local/bin'];
+  if (setup.isSetupComplete()) {
+    extraPaths.unshift(setup.getVenvBinPath());
+  }
+  env.PATH = extraPaths.join(':') + ':' + (env.PATH || '');
+
+  const proc = spawn(cmd, args, { env });
 
   activeRuns.set(id, proc);
 

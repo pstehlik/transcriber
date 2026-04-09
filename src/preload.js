@@ -13,8 +13,15 @@ contextBridge.exposeInMainWorld('api', {
   getTranscription: (id) => ipcRenderer.invoke('get-transcription', id),
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (settings) => ipcRenderer.invoke('save-config', settings),
+  deleteTranscription: (id) => ipcRenderer.invoke('delete-transcription', id),
+  deleteAllTranscriptions: () => ipcRenderer.invoke('delete-all-transcriptions'),
   toggleWatch: (enabled) => ipcRenderer.invoke('toggle-watch', enabled),
   getWatchState: () => ipcRenderer.invoke('get-watch-state'),
+  checkSetupComplete: () => ipcRenderer.invoke('check-setup-complete'),
+  runSetup: () => ipcRenderer.invoke('run-setup'),
+  onSetupProgress: (callback) => {
+    ipcRenderer.on('setup-progress', (_event, message) => callback(message));
+  },
 
   onTranscriptionSegment: (callback) => {
     ipcRenderer.on('transcription-segment', (_event, id, text) => callback(id, text));

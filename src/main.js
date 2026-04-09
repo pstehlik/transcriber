@@ -5,6 +5,7 @@ const database = require('./database');
 const config = require('./config');
 const transcriber = require('./transcriber');
 const watcher = require('./watcher');
+const setup = require('./setup');
 
 let mainWindow = null;
 
@@ -208,6 +209,29 @@ function setupIPC() {
 
   ipcMain.handle('get-watch-state', async () => {
     return watcher.isRunning();
+  });
+
+  ipcMain.handle('delete-transcription', async (_event, id) => {
+    return database.deleteTranscription(dbPath, id);
+  });
+
+  ipcMain.handle('delete-all-transcriptions', async () => {
+    return database.deleteAllTranscriptions(dbPath);
+  });
+
+  ipcMain.handle('check-setup-complete', () => {
+    return setup.isSetupComplete();
+  });
+
+  ipcMain.handle('run-setup', async () => {
+    try {
+      await setup.runSetup((message) => {
+        mainWindow?.webContents.send('setup-progress', message);
+      });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   });
 }
 
