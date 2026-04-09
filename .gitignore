@@ -1,0 +1,7 @@
+node_modules/
+test/test_audio/
+test/test_transcriptions.db
+test/test_config/
+.DS_Store
+# mlx_whisper output files
+*.txt

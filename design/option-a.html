@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcriber — Design Mockup (Option A)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --border: #e0e0e0;
+    --border-light: #eeeeee;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-muted: #aeaeb2;
+    --accent: #007aff;
+    --accent-hover: #0066d6;
+    --accent-light: rgba(0, 122, 255, 0.08);
+    --danger: #ff3b30;
+    --warning: #ff9500;
+    --success: #34c759;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+    --radius: 8px;
+    --radius-sm: 6px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+    --transition: 180ms ease;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── App Shell ── */
+  .app {
+    min-width: 900px;
+    min-height: 700px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+  }
+
+  .screen { display: none; flex-direction: column; height: 100%; }
+  .screen.active { display: flex; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+  }
+
+  .topbar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    color: var(--text);
+  }
+
+  .topbar-title .icon { font-size: 18px; }
+
+  .topbar-btn {
+    -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all var(--transition);
+  }
+  .topbar-btn:hover { background: var(--bg); color: var(--text); border-color: #ccc; }
+
+  .topbar-back {
+    -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--accent);
+    transition: opacity var(--transition);
+  }
+  .topbar-back:hover { opacity: 0.7; }
+  .topbar-back svg { width: 16px; height: 16px; }
+
+  /* ── Gear SVG ── */
+  .gear-svg { width: 16px; height: 16px; }
+
+  /* ── Main Content (upper 70%) ── */
+  .main-content {
+    display: flex;
+    flex: 7;
+    min-height: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Left Panel (20%) ── */
+  .left-panel {
+    width: 20%;
+    min-width: 180px;
+    max-width: 240px;
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .drop-zone-wrapper { position: relative; }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 24px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--surface);
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .drop-zone-icon {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 8px;
+    color: var(--text-muted);
+  }
+  .drop-zone.dragover .drop-zone-icon { color: var(--accent); }
+
+  .drop-zone-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .drop-zone-disabled {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 250, 250, 0.88);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition);
+  }
+  .drop-zone-wrapper.disabled .drop-zone-disabled {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drop-zone-wrapper.disabled .drop-zone {
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  .btn-open {
+    width: 100%;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .btn-open:hover { background: var(--bg); border-color: #ccc; }
+  .drop-zone-wrapper.disabled ~ .btn-open { opacity: 0.4; pointer-events: none; }
+
+  .file-meta {
+    border-top: 1px solid var(--border-light);
+    padding-top: 12px;
+  }
+
+  .file-meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 11px;
+  }
+  .file-meta-label { color: var(--text-muted); }
+  .file-meta-value { color: var(--text); font-weight: 500; }
+
+  .toggle-disabled {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-track {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--border);
+    position: relative;
+    transition: background var(--transition);
+    flex-shrink: 0;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform var(--transition);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle-track.on .toggle-knob { transform: translateX(16px); }
+
+  /* ── Right Panel (80%) ── */
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* ── Log Panel ── */
+  .log-panel {
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--transition);
+  }
+  .log-header:hover { background: var(--bg); }
+
+  .log-chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    transition: transform var(--transition);
+    flex-shrink: 0;
+  }
+  .log-panel.expanded .log-chevron { transform: rotate(90deg); }
+
+  .log-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .log-status {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .log-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .log-spacer { flex: 1; }
+
+  .btn-stop {
+    padding: 3px 10px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--danger);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .btn-stop:hover { background: var(--danger); color: white; }
+
+  .log-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 250ms ease;
+  }
+  .log-panel.expanded .log-body { max-height: 180px; }
+
+  .log-entries {
+    padding: 0 16px 10px;
+    overflow-y: auto;
+    max-height: 170px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  .log-entry { display: flex; gap: 8px; }
+  .log-ts { color: var(--text-muted); white-space: nowrap; }
+  .log-level {
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 40px;
+  }
+  .log-level.info { color: var(--text-muted); }
+  .log-level.warn { color: var(--warning); }
+  .log-level.error { color: var(--danger); }
+  .log-msg { color: var(--text-secondary); }
+
+  /* ── Transcription Area ── */
+  .transcription-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+  }
+
+  .transcription-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 16px;
+    flex-shrink: 0;
+  }
+
+  .btn-copy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    min-width: 100px;
+    justify-content: center;
+  }
+  .btn-copy:hover { background: var(--bg); border-color: #ccc; color: var(--text); }
+  .btn-copy.copied { border-color: var(--success); color: var(--success); }
+  .btn-copy svg { width: 13px; height: 13px; }
+
+  .transcription-text {
+    flex: 1;
+    margin: 0 16px 16px;
+    padding: 14px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    background: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text);
+    overflow-y: auto;
+    resize: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .transcription-text.placeholder { color: var(--text-muted); font-style: italic; }
+
+  /* ── History Panel (lower 30%) ── */
+  .history-panel {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg);
+  }
+
+  .history-header {
+    padding: 10px 20px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 12px;
+  }
+
+  .history-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .history-row:hover { background: rgba(0,0,0,0.03); }
+  .history-row.selected { background: var(--accent-light); }
+
+  .history-indicator {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+  }
+  .history-indicator .dot-live {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  .history-ts {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    min-width: 120px;
+  }
+
+  .history-preview {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .history-file {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Config Screen ── */
+  .config-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  .config-card {
+    width: 100%;
+    max-width: 560px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow-sm);
+    height: fit-content;
+  }
+
+  .config-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 28px;
+    color: var(--text);
+  }
+
+  .form-group { margin-bottom: 24px; }
+  .form-group:last-of-type { margin-bottom: 32px; }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .form-help {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .form-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    resize: vertical;
+    transition: border-color var(--transition);
+  }
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  }
+
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .stepper-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    font-family: var(--font);
+  }
+  .stepper-btn:hover { background: var(--bg); color: var(--text); }
+  .stepper-btn:first-child { border-right: 1px solid var(--border); }
+  .stepper-btn:last-child { border-left: 1px solid var(--border); }
+
+  .stepper-value {
+    width: 48px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .btn-save {
+    padding: 8px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: white;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .btn-save:hover { background: var(--accent-hover); }
+  .btn-save:active { transform: scale(0.98); }
+
+  /* ── Scrollbar Styling ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d1d6; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #aeaeb2; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SCREEN 1: MAIN                          -->
+  <!-- ═══════════════════════════════════════ -->
+  <div id="screen-main" class="screen active">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="topbar-title">
+        <span class="icon">&nbsp;&#x1F4E2;</span>
+        <span>Transcriber</span>
+      </div>
+      <button class="topbar-btn" id="btn-settings" title="Settings">
+        <svg class="gear-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Main Content Area (upper 70%) -->
+    <div class="main-content">
+
+      <!-- Left Panel: Drop Zone & File Meta -->
+      <div class="left-panel">
+        <div class="drop-zone-wrapper" id="drop-wrapper">
+          <div class="drop-zone" id="drop-zone">
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 12 15 15"/>
+            </svg>
+            <div class="drop-zone-text">Drop audio file here</div>
+          </div>
+          <div class="drop-zone-disabled">Max parallel runs reached.<br>Please wait...</div>
+        </div>
+
+        <button class="btn-open" id="btn-open-file">Open File</button>
+
+        <div class="file-meta">
+          <div class="file-meta-row">
+            <span class="file-meta-label">File</span>
+            <span class="file-meta-value">interview.m4a</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Duration</span>
+            <span class="file-meta-value">4:32</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Size</span>
+            <span class="file-meta-value">12.4 MB</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Format</span>
+            <span class="file-meta-value">M4A</span>
+          </div>
+        </div>
+
+        <label class="toggle-disabled" id="toggle-max-runs">
+          <div class="toggle-track" id="toggle-track">
+            <div class="toggle-knob"></div>
+          </div>
+          <span>Simulate max runs</span>
+        </label>
+      </div>
+
+      <!-- Right Panel: Log + Transcription -->
+      <div class="right-panel">
+
+        <!-- Log Panel -->
+        <div class="log-panel" id="log-panel">
+          <div class="log-header" id="log-header">
+            <svg class="log-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span class="log-label">Log</span>
+            <span class="log-status"><span class="dot"></span> Transcribing...</span>
+            <span class="log-spacer"></span>
+            <button class="btn-stop" onclick="event.stopPropagation()">Stop</button>
+          </div>
+          <div class="log-body">
+            <div class="log-entries">
+              <div class="log-entry">
+                <span class="log-ts">14:23:01</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Loading model mlx-community/whisper-medium-mlx...</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:04</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Model loaded successfully (2.3s)</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:04</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Processing audio file: interview.m4a</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:05</span>
+                <span class="log-level warn">WARN</span>
+                <span class="log-msg">Audio sample rate 48000Hz, resampling to 16000Hz</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:06</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Transcribing segment 1/12...</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:08</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Transcribing segment 2/12...</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:10</span>
+                <span class="log-level error">ERROR</span>
+                <span class="log-msg">Segment 3 decode failed, retrying with fallback...</span>
+              </div>
+              <div class="log-entry">
+                <span class="log-ts">14:23:12</span>
+                <span class="log-level info">INFO</span>
+                <span class="log-msg">Transcribing segment 3/12 (retry)...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcription Output -->
+        <div class="transcription-area">
+          <div class="transcription-toolbar">
+            <button class="btn-copy" id="btn-copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span id="copy-label">Copy to Clipboard</span>
+            </button>
+          </div>
+          <div class="transcription-text" id="transcription-output">So I think the most interesting thing about working with large language models is really understanding the nuance of prompt engineering. It's not just about asking a question, it's about framing the context in a way that guides the model toward the kind of response you're looking for.
+
+And when you think about it from a product perspective, the challenge becomes even more fascinating. You have to balance user expectations with model capabilities, and there's this constant tension between giving users flexibility and providing guardrails that keep the experience consistent.
+
+One thing we learned early on was that temperature settings matter a lot more than people realize. A small change from 0.7 to 0.9 can dramatically shift the character of responses. We ended up building a whole internal tool just to A/B test different parameter configurations across use cases.
+
+The other piece that surprised us was how much the system prompt architecture matters. We went through probably fifteen iterations before landing on something that felt right...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Panel (lower 30%) -->
+    <div class="history-panel">
+      <div class="history-header">History</div>
+      <div class="history-list" id="history-list">
+        <div class="history-row selected" data-index="0">
+          <div class="history-indicator"><div class="dot-live"></div></div>
+          <span class="history-ts">2026-04-09 14:23</span>
+          <span class="history-preview">So I think the most interesting thing about working with large language models is really understanding the nuance of prompt engineering...</span>
+          <span class="history-file">interview.m4a</span>
+        </div>
+        <div class="history-row" data-index="1">
+          <div class="history-indicator"></div>
+          <span class="history-ts">2026-04-09 11:05</span>
+          <span class="history-preview">Welcome everyone to this week's standup. Let's start with a quick round of updates from each team. Sarah, do you want to kick us off?</span>
+          <span class="history-file">standup-apr9.wav</span>
+        </div>
+        <div class="history-row" data-index="2">
+          <div class="history-indicator"></div>
+          <span class="history-ts">2026-04-08 16:42</span>
+          <span class="history-preview">Chapter one. It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast...</span>
+          <span class="history-file">audiobook-ch1.mp3</span>
+        </div>
+        <div class="history-row" data-index="3">
+          <div class="history-indicator"></div>
+          <span class="history-ts">2026-04-07 09:18</span>
+          <span class="history-preview">Hey, just leaving a quick voice memo. I need to remember to pick up groceries on the way home and also call the dentist about rescheduling...</span>
+          <span class="history-file">voice-memo.m4a</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SCREEN 2: CONFIG                        -->
+  <!-- ═══════════════════════════════════════ -->
+  <div id="screen-config" class="screen">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+      <button class="topbar-back" id="btn-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        <span>Back</span>
+      </button>
+      <div></div>
+    </div>
+
+    <!-- Config Content -->
+    <div class="config-content">
+      <div class="config-card">
+        <div class="config-title">Settings</div>
+
+        <div class="form-group">
+          <label class="form-label">Transcription Command</label>
+          <textarea class="form-textarea" rows="3" spellcheck="false">mlx_whisper --model mlx-community/whisper-medium-mlx --output-format txt [INPUT_FILE]</textarea>
+          <div class="form-help">Use <strong>[INPUT_FILE]</strong> as a placeholder for the audio file path. It will be replaced with the actual file path at runtime.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Parallel Runs</label>
+          <div class="stepper">
+            <button class="stepper-btn" id="stepper-dec">&minus;</button>
+            <span class="stepper-value" id="stepper-value">3</span>
+            <button class="stepper-btn" id="stepper-inc">+</button>
+          </div>
+          <div class="form-help">Maximum number of transcriptions that can run simultaneously (1 &ndash; 10).</div>
+        </div>
+
+        <button class="btn-save" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Screen switching ── */
+  var screenMain = document.getElementById('screen-main');
+  var screenConfig = document.getElementById('screen-config');
+
+  document.getElementById('btn-settings').addEventListener('click', function () {
+    screenMain.classList.remove('active');
+    screenConfig.classList.add('active');
+  });
+
+  document.getElementById('btn-back').addEventListener('click', function () {
+    screenConfig.classList.remove('active');
+    screenMain.classList.add('active');
+  });
+
+  /* ── Log panel toggle ── */
+  var logPanel = document.getElementById('log-panel');
+  document.getElementById('log-header').addEventListener('click', function () {
+    logPanel.classList.toggle('expanded');
+  });
+
+  /* ── Copy button ── */
+  var btnCopy = document.getElementById('btn-copy');
+  var copyLabel = document.getElementById('copy-label');
+  var copyTimeout;
+
+  btnCopy.addEventListener('click', function () {
+    var text = document.getElementById('transcription-output').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    btnCopy.classList.add('copied');
+    copyLabel.textContent = 'Copied!';
+    clearTimeout(copyTimeout);
+    copyTimeout = setTimeout(function () {
+      btnCopy.classList.remove('copied');
+      copyLabel.textContent = 'Copy to Clipboard';
+    }, 1500);
+  });
+
+  /* ── History row selection ── */
+  var historyList = document.getElementById('history-list');
+  historyList.addEventListener('click', function (e) {
+    var row = e.target.closest('.history-row');
+    if (!row) return;
+    var rows = historyList.querySelectorAll('.history-row');
+    rows.forEach(function (r) { r.classList.remove('selected'); });
+    row.classList.add('selected');
+  });
+
+  /* ── Toggle "max runs reached" demo ── */
+  var toggleTrack = document.getElementById('toggle-track');
+  var dropWrapper = document.getElementById('drop-wrapper');
+
+  document.getElementById('toggle-max-runs').addEventListener('click', function () {
+    toggleTrack.classList.toggle('on');
+    dropWrapper.classList.toggle('disabled');
+  });
+
+  /* ── Drop zone drag-over simulation ── */
+  var dropZone = document.getElementById('drop-zone');
+
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function () {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+  });
+
+  /* ── Stepper ── */
+  var stepperValue = document.getElementById('stepper-value');
+  var val = 3;
+  var MIN = 1;
+  var MAX = 10;
+
+  document.getElementById('stepper-dec').addEventListener('click', function () {
+    if (val > MIN) { val--; stepperValue.textContent = val; }
+  });
+  document.getElementById('stepper-inc').addEventListener('click', function () {
+    if (val < MAX) { val++; stepperValue.textContent = val; }
+  });
+
+  /* ── Save button feedback ── */
+  var btnSave = document.getElementById('btn-save');
+  var saveTimeout;
+  btnSave.addEventListener('click', function () {
+    var orig = btnSave.textContent;
+    btnSave.textContent = 'Saved!';
+    btnSave.style.background = '#34c759';
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function () {
+      btnSave.textContent = orig;
+      btnSave.style.background = '';
+    }, 1200);
+  });
+})();
+</script>
+
+</body>
+</html>

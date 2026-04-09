@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcriber</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Startup warning banner (hidden by default) -->
+  <div class="startup-banner" id="startup-banner"></div>
+
+  <!-- SCREEN 1: MAIN -->
+  <div id="screen-main" class="screen active">
+
+    <div class="topbar">
+      <div class="topbar-title">
+        <span class="icon">&#x1F4E2;</span>
+        <span>Transcriber</span>
+      </div>
+      <button class="topbar-btn" id="btn-settings" title="Settings">
+        <svg class="gear-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="main-content">
+
+      <!-- Left Panel -->
+      <div class="left-panel">
+        <div class="drop-zone-wrapper" id="drop-wrapper">
+          <div class="drop-zone" id="drop-zone">
+            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 12 15 15"/>
+            </svg>
+            <div class="drop-zone-text">Drop audio file here</div>
+          </div>
+          <div class="drop-zone-disabled">Max parallel runs reached.<br>Please wait...</div>
+        </div>
+
+        <button class="btn-open" id="btn-open-file">Open File</button>
+
+        <div class="watch-toggle">
+          <label class="toggle-switch">
+            <input type="checkbox" id="watch-toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="watch-label" for="watch-toggle-input">Watch Downloads &amp; Documents for voice messages</label>
+        </div>
+
+        <div class="file-meta hidden" id="file-meta">
+          <div class="file-meta-row">
+            <span class="file-meta-label">File</span>
+            <span class="file-meta-value" id="meta-file">—</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Duration</span>
+            <span class="file-meta-value" id="meta-duration">—</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Size</span>
+            <span class="file-meta-value" id="meta-size">—</span>
+          </div>
+          <div class="file-meta-row">
+            <span class="file-meta-label">Format</span>
+            <span class="file-meta-value" id="meta-format">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="right-panel">
+
+        <div class="log-panel" id="log-panel">
+          <div class="log-header" id="log-header">
+            <svg class="log-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span class="log-label">Log</span>
+            <span class="log-status idle" id="log-status">
+              <span class="dot"></span>
+              <span id="log-status-text">Idle</span>
+            </span>
+            <span class="log-spacer"></span>
+            <button class="btn-stop" id="btn-stop" disabled onclick="event.stopPropagation()">Stop</button>
+          </div>
+          <div class="log-body">
+            <div class="log-entries" id="log-entries"></div>
+          </div>
+        </div>
+
+        <div class="transcription-area">
+          <div class="transcription-toolbar">
+            <button class="btn-copy" id="btn-copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span id="copy-label">Copy to Clipboard</span>
+            </button>
+          </div>
+          <div class="transcription-text placeholder" id="transcription-output">Transcription will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="history-panel">
+      <div class="history-header">History</div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty" id="history-empty">No transcriptions yet. Drop an audio file to get started.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: CONFIG -->
+  <div id="screen-config" class="screen">
+
+    <div class="topbar">
+      <button class="topbar-back" id="btn-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        <span>Back</span>
+      </button>
+      <div></div>
+    </div>
+
+    <div class="config-content">
+      <div class="config-card">
+        <div class="config-title">Settings</div>
+
+        <div class="form-group">
+          <label class="form-label">Transcription Command</label>
+          <textarea class="form-textarea" id="config-command" rows="3" spellcheck="false"></textarea>
+          <div class="form-help">Use <strong>[INPUT_FILE]</strong> as a placeholder for the audio file path. It will be replaced with the actual file path at runtime.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Max Parallel Runs</label>
+          <div class="stepper">
+            <button class="stepper-btn" id="stepper-dec">&minus;</button>
+            <span class="stepper-value" id="stepper-value">3</span>
+            <button class="stepper-btn" id="stepper-inc">+</button>
+          </div>
+          <div class="form-help">Maximum number of transcriptions that can run simultaneously (1 &ndash; 10).</div>
+        </div>
+
+        <button class="btn-save" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

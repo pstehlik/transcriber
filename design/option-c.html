@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcriber — Warm Editorial Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --bg:#faf8f5;
+    --bg-warm:#f5f0ea;
+    --bg-cream:#fdfcfa;
+    --bg-card:#fff;
+    --accent:#c45d35;
+    --accent-hover:#b04e2a;
+    --accent-light:rgba(196,93,53,.08);
+    --accent-lighter:rgba(196,93,53,.04);
+    --text-primary:#2c2723;
+    --text-secondary:#6b6259;
+    --text-muted:#9c9389;
+    --text-placeholder:#c4bbb2;
+    --border:#e8e2da;
+    --border-light:#f0ebe5;
+    --shadow-sm:0 1px 3px rgba(44,39,35,.06);
+    --shadow-md:0 4px 12px rgba(44,39,35,.08);
+    --shadow-lg:0 8px 24px rgba(44,39,35,.10);
+    --shadow-inner:inset 0 2px 6px rgba(44,39,35,.04);
+    --radius:8px;
+    --radius-lg:12px;
+    --serif:'Playfair Display',Georgia,'Times New Roman',serif;
+    --sans:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'SF Mono','Fira Code','Fira Mono',Menlo,monospace;
+    --transition:220ms cubic-bezier(.4,0,.2,1);
+    --warn:#b8860b;
+    --warn-bg:rgba(184,134,11,.08);
+    --error:#b33a3a;
+    --error-bg:rgba(179,58,58,.08);
+    --success:#4a7c59;
+    --success-bg:rgba(74,124,89,.08);
+  }
+
+  html{font-size:15px}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--text-primary);
+    line-height:1.5;
+    min-width:900px;
+    min-height:700px;
+    height:100vh;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── App shell ── */
+  .app{display:flex;flex-direction:column;height:100vh;position:relative}
+
+  /* ── Top bar ── */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;height:52px;min-height:52px;
+    background:var(--bg-cream);
+    border-bottom:1px solid var(--border-light);
+    z-index:10;
+  }
+  .topbar-left{display:flex;align-items:center;gap:10px}
+  .topbar-title{
+    font-family:var(--serif);font-size:1.25rem;font-weight:600;
+    color:var(--text-primary);letter-spacing:-.01em;
+  }
+  .topbar-emoji{font-size:1.1rem;margin-right:2px}
+  .topbar-right{display:flex;align-items:center;gap:8px}
+
+  .icon-btn{
+    width:34px;height:34px;border-radius:var(--radius);border:none;
+    background:transparent;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;color:var(--text-muted);transition:all var(--transition);
+  }
+  .icon-btn:hover{background:var(--accent-light);color:var(--accent)}
+  .icon-btn svg{width:18px;height:18px}
+
+  /* ── Screen transitions ── */
+  .screen{display:none;flex-direction:column;flex:1;overflow:hidden}
+  .screen.active{display:flex}
+
+  /* ── Main content area (upper 70%) ── */
+  .main-area{display:flex;flex:7;min-height:0;overflow:hidden}
+
+  /* ── LEFT PANEL (20%) ── */
+  .panel-left{
+    width:20%;min-width:200px;max-width:260px;
+    display:flex;flex-direction:column;
+    padding:20px 18px;gap:16px;
+    background:var(--bg-cream);
+    border-right:1px solid var(--border-light);
+    position:relative;
+    overflow-y:auto;
+  }
+
+  .dropzone{
+    border:2px dashed var(--border);
+    border-radius:var(--radius-lg);
+    padding:28px 14px;
+    text-align:center;
+    background:var(--bg);
+    box-shadow:var(--shadow-inner);
+    transition:all var(--transition);
+    cursor:pointer;
+    position:relative;
+  }
+  .dropzone:hover,.dropzone.drag-over{
+    border-color:var(--accent);
+    background:var(--accent-lighter);
+  }
+  .dropzone-icon{
+    display:block;margin:0 auto 10px;
+    color:var(--text-muted);transition:color var(--transition);
+  }
+  .dropzone:hover .dropzone-icon{color:var(--accent)}
+  .dropzone-icon svg{width:32px;height:32px}
+  .dropzone-text{
+    font-family:var(--serif);font-size:.88rem;
+    color:var(--text-muted);line-height:1.4;
+  }
+
+  .btn-primary{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:10px 20px;border:none;border-radius:999px;
+    background:var(--accent);color:#fff;
+    font-family:var(--sans);font-size:.88rem;font-weight:500;
+    cursor:pointer;transition:all var(--transition);
+    box-shadow:0 2px 8px rgba(196,93,53,.2);
+    width:100%;
+  }
+  .btn-primary:hover{background:var(--accent-hover);box-shadow:0 4px 14px rgba(196,93,53,.28);transform:translateY(-1px)}
+  .btn-primary:active{transform:translateY(0)}
+
+  .file-meta{
+    background:var(--bg);border-radius:var(--radius);
+    padding:14px;border:1px solid var(--border-light);
+  }
+  .file-meta-title{
+    font-family:var(--serif);font-size:.92rem;font-weight:600;
+    color:var(--text-primary);margin-bottom:10px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .file-meta dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+  .file-meta dt{
+    font-size:.7rem;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--text-muted);
+    line-height:1.8;
+  }
+  .file-meta dd{font-size:.82rem;color:var(--text-secondary);line-height:1.8}
+
+  /* Max runs overlay */
+  .max-runs-overlay{
+    position:absolute;inset:0;
+    background:rgba(250,248,245,.88);
+    backdrop-filter:blur(4px);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:8px;z-index:5;
+    opacity:0;pointer-events:none;
+    transition:opacity 300ms ease;
+  }
+  .max-runs-overlay.visible{opacity:1;pointer-events:all}
+  .max-runs-overlay p{
+    font-family:var(--serif);font-style:italic;
+    font-size:.92rem;color:var(--text-secondary);
+    text-align:center;padding:0 20px;line-height:1.5;
+  }
+  .max-runs-spinner{
+    width:28px;height:28px;border:2.5px solid var(--border);
+    border-top-color:var(--accent);border-radius:50%;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 0;font-size:.78rem;color:var(--text-muted);
+  }
+  .toggle{
+    width:40px;height:22px;border-radius:11px;
+    background:var(--border);cursor:pointer;
+    position:relative;transition:background var(--transition);
+    border:none;padding:0;
+  }
+  .toggle.on{background:var(--accent)}
+  .toggle::after{
+    content:'';position:absolute;top:3px;left:3px;
+    width:16px;height:16px;border-radius:50%;
+    background:#fff;box-shadow:var(--shadow-sm);
+    transition:transform var(--transition);
+  }
+  .toggle.on::after{transform:translateX(18px)}
+
+  /* ── RIGHT PANEL (80%) ── */
+  .panel-right{
+    flex:1;display:flex;flex-direction:column;
+    min-width:0;overflow:hidden;
+  }
+
+  /* Log panel */
+  .log-panel{
+    background:var(--bg-warm);
+    border-bottom:1px solid var(--border-light);
+    overflow:hidden;
+    transition:max-height 300ms ease;
+  }
+  .log-panel.collapsed{max-height:42px!important}
+  .log-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 24px;cursor:pointer;user-select:none;
+    min-height:42px;
+  }
+  .log-header-left{display:flex;align-items:center;gap:10px}
+  .log-header-title{font-size:.82rem;font-weight:600;color:var(--text-secondary);letter-spacing:.03em}
+  .log-chevron{
+    width:16px;height:16px;color:var(--text-muted);
+    transition:transform var(--transition);
+    flex-shrink:0;
+  }
+  .log-panel.collapsed .log-chevron{transform:rotate(-90deg)}
+
+  .log-status{
+    font-size:.78rem;font-weight:500;
+    display:flex;align-items:center;gap:6px;
+  }
+  .log-status.transcribing{color:var(--accent)}
+  .log-status.completed{color:var(--success)}
+  .log-status .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:currentColor;
+  }
+  .log-status.transcribing .dot{animation:pulse-dot 1.4s ease-in-out infinite}
+  @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+  .ellipsis::after{
+    content:'';
+    animation:ellipsis 1.6s steps(4,end) infinite;
+  }
+  @keyframes ellipsis{
+    0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}
+  }
+
+  .log-header-right{display:flex;align-items:center;gap:10px}
+  .btn-stop{
+    padding:5px 14px;border:1px solid var(--error);border-radius:999px;
+    background:var(--error-bg);color:var(--error);
+    font-size:.75rem;font-weight:500;font-family:var(--sans);
+    cursor:pointer;transition:all var(--transition);
+  }
+  .btn-stop:hover{background:var(--error);color:#fff}
+
+  .log-body{
+    padding:0 24px 12px;max-height:140px;overflow-y:auto;
+  }
+  .log-entry{
+    display:flex;gap:10px;padding:3px 0;
+    font-size:.78rem;line-height:1.5;
+  }
+  .log-time{color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
+  .log-msg{color:var(--text-secondary)}
+  .log-entry.warn .log-msg{color:var(--warn)}
+  .log-entry.error .log-msg{color:var(--error)}
+  .log-entry.info .log-msg{color:var(--text-secondary)}
+
+  /* Transcription reading pane */
+  .transcript-pane{
+    flex:1;display:flex;flex-direction:column;
+    padding:24px 28px 16px;overflow:hidden;position:relative;
+  }
+  .transcript-toolbar{
+    display:flex;align-items:center;justify-content:flex-end;
+    margin-bottom:12px;
+  }
+  .btn-copy{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 16px;border:1px solid var(--border);border-radius:999px;
+    background:var(--bg-cream);color:var(--text-secondary);
+    font-size:.78rem;font-weight:500;font-family:var(--sans);
+    cursor:pointer;transition:all var(--transition);
+  }
+  .btn-copy:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lighter)}
+  .btn-copy.copied{border-color:var(--success);color:var(--success);background:var(--success-bg)}
+  .btn-copy svg{width:14px;height:14px}
+
+  .transcript-body{
+    flex:1;overflow-y:auto;
+    background:var(--bg-card);
+    border:1px solid var(--border-light);
+    border-radius:var(--radius-lg);
+    padding:32px 36px;
+    box-shadow:var(--shadow-sm);
+    font-family:var(--sans);
+    font-size:1rem;
+    line-height:1.72;
+    color:var(--text-primary);
+    letter-spacing:.01em;
+  }
+  .transcript-body p{margin-bottom:1em}
+  .transcript-body p:last-child{margin-bottom:0}
+  .transcript-placeholder{color:var(--text-placeholder);font-style:italic;font-family:var(--serif)}
+
+  /* ── HISTORY (lower 30%) ── */
+  .history-section{
+    flex:3;min-height:0;
+    display:flex;flex-direction:column;
+    border-top:1px solid var(--border-light);
+    background:var(--bg-cream);
+  }
+  .history-header{
+    display:flex;align-items:center;gap:14px;
+    padding:14px 28px 10px;flex-shrink:0;
+  }
+  .history-header h2{
+    font-family:var(--serif);font-size:1.05rem;font-weight:600;
+    color:var(--text-primary);
+  }
+  .history-header .divider{flex:1;height:1px;background:var(--border)}
+
+  .history-list{flex:1;overflow-y:auto;padding:0 28px 14px}
+  .history-row{
+    display:flex;align-items:center;gap:16px;
+    padding:12px 16px;border-radius:var(--radius);
+    cursor:pointer;transition:all var(--transition);
+    border-left:3px solid transparent;
+    margin-bottom:2px;
+  }
+  .history-row:hover{background:var(--accent-lighter)}
+  .history-row.selected{
+    border-left-color:var(--accent);
+    background:var(--accent-light);
+  }
+  .history-dot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  }
+  .history-dot.in-progress{
+    background:var(--accent);
+    animation:pulse-glow 2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow{
+    0%,100%{box-shadow:0 0 0 0 rgba(196,93,53,.3)}
+    50%{box-shadow:0 0 0 5px rgba(196,93,53,0)}
+  }
+  .history-dot.done{background:var(--success)}
+  .history-dot.error{background:var(--error)}
+  .history-info{flex:1;min-width:0}
+  .history-preview{
+    font-size:.88rem;color:var(--text-primary);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    line-height:1.4;
+  }
+  .history-meta{
+    font-size:.72rem;color:var(--text-muted);
+    display:flex;gap:12px;margin-top:2px;
+  }
+  .history-time{font-variant-numeric:tabular-nums}
+
+  /* ── CONFIG SCREEN ── */
+  .config-screen{padding:0;overflow-y:auto}
+  .config-topbar{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 28px;background:var(--bg-cream);
+    border-bottom:1px solid var(--border-light);
+    position:sticky;top:0;z-index:5;
+  }
+  .btn-back{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 14px;border:none;border-radius:999px;
+    background:var(--accent-light);color:var(--accent);
+    font-family:var(--sans);font-size:.82rem;font-weight:500;
+    cursor:pointer;transition:all var(--transition);
+  }
+  .btn-back:hover{background:var(--accent);color:#fff}
+  .btn-back svg{width:16px;height:16px}
+  .config-title{font-family:var(--serif);font-size:1.25rem;font-weight:600;color:var(--text-primary)}
+
+  .config-body{
+    max-width:640px;
+    margin:0 auto;
+    padding:32px 28px 48px;
+  }
+  .config-card{
+    background:var(--bg-card);
+    border:1px solid var(--border-light);
+    border-radius:var(--radius-lg);
+    padding:28px;
+    box-shadow:var(--shadow-sm);
+    margin-bottom:20px;
+  }
+  .config-card label{
+    display:block;
+    font-family:var(--serif);font-size:.95rem;font-weight:600;
+    color:var(--text-primary);margin-bottom:10px;
+  }
+  .config-card .help-text{
+    font-size:.78rem;color:var(--text-muted);
+    line-height:1.5;margin-top:8px;
+  }
+  .config-card textarea{
+    width:100%;min-height:80px;padding:12px 14px;
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--bg);color:var(--text-primary);
+    font-family:var(--mono);font-size:.82rem;
+    line-height:1.6;resize:vertical;
+    transition:border-color var(--transition);
+  }
+  .config-card textarea:focus{outline:none;border-color:var(--accent)}
+
+  .config-card input[type="number"]{
+    width:80px;padding:10px 14px;
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--bg);color:var(--text-primary);
+    font-family:var(--sans);font-size:.95rem;
+    text-align:center;
+    transition:border-color var(--transition);
+  }
+  .config-card input[type="number"]:focus{outline:none;border-color:var(--accent)}
+
+  .config-actions{text-align:right;padding-top:8px}
+  .config-actions .btn-primary{width:auto;padding:10px 32px}
+
+  /* ── Scrollbar styling ── */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+  /* ── Toast ── */
+  .toast{
+    position:fixed;bottom:24px;right:24px;
+    padding:12px 22px;border-radius:var(--radius);
+    background:var(--text-primary);color:var(--bg);
+    font-size:.85rem;font-weight:500;
+    box-shadow:var(--shadow-lg);
+    opacity:0;transform:translateY(10px);
+    transition:all 300ms ease;
+    pointer-events:none;z-index:100;
+  }
+  .toast.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title"><span class="topbar-emoji">&#x1F4E2;</span> Transcriber</span>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="btn-settings" title="Settings" onclick="showConfig()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════ SCREEN 1: MAIN ══════════ -->
+  <div class="screen active" id="screen-main">
+
+    <!-- Upper area: split 20/80 -->
+    <div class="main-area">
+
+      <!-- LEFT PANEL -->
+      <aside class="panel-left" id="panel-left">
+        <div class="dropzone" id="dropzone"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="event.preventDefault();this.classList.remove('drag-over')">
+          <span class="dropzone-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+          </span>
+          <span class="dropzone-text">Drop audio file here</span>
+        </div>
+
+        <button class="btn-primary" onclick="toast('File dialog opened')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Open File
+        </button>
+
+        <div class="file-meta">
+          <div class="file-meta-title">interview.m4a</div>
+          <dl>
+            <dt>Duration</dt><dd>4:32</dd>
+            <dt>Size</dt><dd>12.4 MB</dd>
+            <dt>Format</dt><dd>M4A</dd>
+          </dl>
+        </div>
+
+        <div class="toggle-row">
+          <span>Demo disabled state</span>
+          <button class="toggle" id="toggle-maxruns" onclick="toggleMaxRuns()"></button>
+        </div>
+
+        <!-- Max runs overlay -->
+        <div class="max-runs-overlay" id="max-runs-overlay">
+          <div class="max-runs-spinner"></div>
+          <p>Max parallel runs reached.<br>Please wait&hellip;</p>
+        </div>
+      </aside>
+
+      <!-- RIGHT PANEL -->
+      <div class="panel-right">
+
+        <!-- Log panel -->
+        <div class="log-panel" id="log-panel">
+          <div class="log-header" onclick="toggleLog()">
+            <div class="log-header-left">
+              <svg class="log-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="log-header-title">Process Log</span>
+              <span class="log-status transcribing" id="log-status">
+                <span class="dot"></span>
+                <span>Transcribing<span class="ellipsis"></span></span>
+              </span>
+            </div>
+            <div class="log-header-right">
+              <button class="btn-stop" onclick="event.stopPropagation();toggleStatus()">Stop</button>
+            </div>
+          </div>
+          <div class="log-body" id="log-body">
+            <div class="log-entry info">
+              <span class="log-time">14:32:01</span>
+              <span class="log-msg">Starting transcription of interview.m4a</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">14:32:01</span>
+              <span class="log-msg">Loading model mlx-community/whisper-medium-mlx</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">14:32:04</span>
+              <span class="log-msg">Model loaded successfully (2.8s)</span>
+            </div>
+            <div class="log-entry warn">
+              <span class="log-time">14:32:04</span>
+              <span class="log-msg">Audio sample rate mismatch, resampling from 48kHz to 16kHz</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">14:32:05</span>
+              <span class="log-msg">Processing audio chunks: 1 of 3</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">14:32:18</span>
+              <span class="log-msg">Processing audio chunks: 2 of 3</span>
+            </div>
+            <div class="log-entry error">
+              <span class="log-time">14:32:19</span>
+              <span class="log-msg">Chunk 2 had low confidence (0.42), retrying with adjusted parameters</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">14:32:31</span>
+              <span class="log-msg">Processing audio chunks: 3 of 3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcription reading pane -->
+        <div class="transcript-pane">
+          <div class="transcript-toolbar">
+            <button class="btn-copy" id="btn-copy" onclick="copyTranscript()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span id="copy-label">Copy to Clipboard</span>
+            </button>
+          </div>
+          <div class="transcript-body" id="transcript-body">
+            <p>So the thing that really struck me about the early days was how quiet everything was. You'd walk into the office, and there were maybe six of us, all hunched over these ancient ThinkPads, and nobody spoke before noon. It was almost like a library. But the energy was incredible, you know? Everyone was building something they believed in.</p>
+            <p>I remember Sarah came in one morning with this prototype she'd been working on all weekend. She just set her laptop down in the middle of the table, didn't say a word, and we all gathered around. It was the first version of the audio pipeline, completely rough, full of bugs, but you could speak into the microphone and see your words appear on screen about three seconds later. We all just stared at it.</p>
+            <p>That moment changed everything. Before that, transcription was this abstract problem we were solving on paper. Suddenly it was real. You could talk to a machine and it understood you. Well, mostly understood you. It kept transcribing "neural network" as "neural nutwork," which became a running joke for months.</p>
+            <p>The hardest part wasn't the technology, honestly. It was convincing people that local transcription mattered. Everyone was so fixated on cloud APIs, sending your audio to some server halfway across the world. We kept saying, look, people care about privacy. People care about latency. People want to own their tools. It took a while, but the world caught up.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY SECTION (lower 30%) ── -->
+    <div class="history-section">
+      <div class="history-header">
+        <h2>History</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="history-row selected" onclick="selectRow(this)">
+          <span class="history-dot in-progress"></span>
+          <div class="history-info">
+            <div class="history-preview">So the thing that really struck me about the early days was how quiet everything was. You'd walk into the office...</div>
+            <div class="history-meta">
+              <span class="history-time">Today, 2:32 PM</span>
+              <span>interview.m4a</span>
+              <span>4:32</span>
+            </div>
+          </div>
+        </div>
+        <div class="history-row" onclick="selectRow(this)">
+          <span class="history-dot done"></span>
+          <div class="history-info">
+            <div class="history-preview">Welcome to the quarterly review. I want to start by acknowledging the incredible work the engineering team has done...</div>
+            <div class="history-meta">
+              <span class="history-time">Today, 11:15 AM</span>
+              <span>quarterly-review.mp3</span>
+              <span>12:08</span>
+            </div>
+          </div>
+        </div>
+        <div class="history-row" onclick="selectRow(this)">
+          <span class="history-dot done"></span>
+          <div class="history-info">
+            <div class="history-preview">Chapter one. The art of listening is perhaps the most undervalued skill in modern discourse. We speak endlessly but rarely pause to truly hear...</div>
+            <div class="history-meta">
+              <span class="history-time">Yesterday, 4:50 PM</span>
+              <span>audiobook-ch1.wav</span>
+              <span>38:22</span>
+            </div>
+          </div>
+        </div>
+        <div class="history-row" onclick="selectRow(this)">
+          <span class="history-dot error"></span>
+          <div class="history-info">
+            <div class="history-preview">Error: Unsupported format. The file could not be processed.</div>
+            <div class="history-meta">
+              <span class="history-time">Yesterday, 2:10 PM</span>
+              <span>corrupted-file.ogg</span>
+              <span>0:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ SCREEN 2: CONFIG ══════════ -->
+  <div class="screen" id="screen-config">
+    <div class="config-screen">
+      <div class="config-topbar">
+        <button class="btn-back" onclick="showMain()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <span class="config-title">Settings</span>
+      </div>
+      <div class="config-body">
+        <div class="config-card">
+          <label for="cfg-command">Transcription Command</label>
+          <textarea id="cfg-command">mlx_whisper --model mlx-community/whisper-medium-mlx --output-format txt [INPUT_FILE]</textarea>
+          <p class="help-text">The command executed for each transcription. Use <code>[INPUT_FILE]</code> as a placeholder for the audio file path. The command should write its output to stdout or to a <code>.txt</code> file alongside the input.</p>
+        </div>
+        <div class="config-card">
+          <label for="cfg-parallel">Max Parallel Runs</label>
+          <input type="number" id="cfg-parallel" value="3" min="1" max="8">
+          <p class="help-text">Maximum number of transcription processes that can run simultaneously. Higher values use more system resources.</p>
+        </div>
+        <div class="config-actions">
+          <button class="btn-primary" onclick="saveConfig()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── Screen switching ── */
+  function showConfig() {
+    document.getElementById('screen-main').classList.remove('active');
+    document.getElementById('screen-config').classList.add('active');
+    document.getElementById('btn-settings').style.display = 'none';
+  }
+  function showMain() {
+    document.getElementById('screen-config').classList.remove('active');
+    document.getElementById('screen-main').classList.add('active');
+    document.getElementById('btn-settings').style.display = '';
+  }
+
+  /* ── Log panel toggle ── */
+  function toggleLog() {
+    document.getElementById('log-panel').classList.toggle('collapsed');
+  }
+
+  /* ── Status toggle (transcribing / completed) ── */
+  let statusTranscribing = true;
+  function toggleStatus() {
+    const el = document.getElementById('log-status');
+    const btn = document.querySelector('.btn-stop');
+    if (statusTranscribing) {
+      el.className = 'log-status completed';
+      el.innerHTML = '<span class="dot"></span><span>Completed \u2713</span>';
+      btn.textContent = 'Restart';
+      statusTranscribing = false;
+    } else {
+      el.className = 'log-status transcribing';
+      el.innerHTML = '<span class="dot"></span><span>Transcribing<span class="ellipsis"></span></span>';
+      btn.textContent = 'Stop';
+      statusTranscribing = true;
+    }
+  }
+
+  /* ── Copy to clipboard ── */
+  function copyTranscript() {
+    const text = document.getElementById('transcript-body').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('btn-copy');
+      const label = document.getElementById('copy-label');
+      btn.classList.add('copied');
+      label.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        label.textContent = 'Copy to Clipboard';
+      }, 2000);
+    });
+  }
+
+  /* ── Max runs toggle ── */
+  function toggleMaxRuns() {
+    const toggle = document.getElementById('toggle-maxruns');
+    const overlay = document.getElementById('max-runs-overlay');
+    toggle.classList.toggle('on');
+    overlay.classList.toggle('visible');
+  }
+
+  /* ── History row selection ── */
+  function selectRow(el) {
+    document.querySelectorAll('.history-row').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  /* ── Config save ── */
+  function saveConfig() {
+    toast('Settings saved');
+    setTimeout(showMain, 600);
+  }
+
+  /* ── Toast ── */
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('visible');
+    setTimeout(() => t.classList.remove('visible'), 2200);
+  }
+</script>
+</body>
+</html>
