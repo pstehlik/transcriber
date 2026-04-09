@@ -91,7 +91,11 @@ function startTranscriptionRun(id, filePath, command) {
 
 function startWatcher() {
   watcher.start(async (filePath) => {
-    await handleWatchedFile(filePath);
+    try {
+      await handleWatchedFile(filePath);
+    } catch (err) {
+      console.error('Watcher error for', filePath, err);
+    }
   });
 }
 

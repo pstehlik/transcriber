@@ -121,7 +121,7 @@ To distribute: send the DMG file. The recipient drags Transcriber to Application
 
 ## Testing notes
 
-- `npm test` runs 42 tests in ~4s: database (7), config (4), transcriber/parseCommand (9), watcher (20), integration (2)
+- `npm test` runs 42 tests in ~6s: database (7), config (4), transcriber/parseCommand (9), watcher (20), integration (2)
 - Integration tests require `mlx_whisper` installed and the whisper-medium-mlx model downloaded
 - `npm run test:e2e` runs inside Electron's Node runtime, verifying no native module issues
 - `npm run test:launch` starts the full app and verifies it doesn't crash within 5 seconds

@@ -2,45 +2,50 @@
 
 A minimal macOS Electron app for local audio transcription using [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) on Apple Silicon.
 
-Drop an audio file (or click "Open File"), and the app transcribes it locally using `mlx_whisper` — no uploads, no cloud, no API keys. Transcription text streams into the UI segment-by-segment as it's processed.
+Drop an audio file (or click "Open Audio File"), and the app transcribes it locally using `mlx_whisper` — no uploads, no cloud, no API keys. Transcription text streams into the UI segment-by-segment as it's processed.
 
-## Prerequisites
+## Requirements
 
-- macOS with Apple Silicon (M1/M2/M3/M4)
-- Node.js 18+
-- [ffmpeg](https://ffmpeg.org/) (required by mlx_whisper for audio decoding)
-- Python 3 with `mlx-whisper` installed:
+- macOS 14 (Sonoma) or later
+- Apple Silicon (M1/M2/M3/M4)
+- Node.js 18+ (for development only)
 
-```bash
-brew install ffmpeg       # if not already installed
-pip install mlx-whisper
-```
+Python, mlx_whisper, and ffmpeg are installed automatically on first launch — no manual setup needed.
 
-Verify it works:
+## Install
 
-```bash
-mlx_whisper --help
-```
+Download the DMG from [Releases](https://github.com/pstehlik/transcriber/releases), open it, and drag Transcriber to Applications.
 
-The first transcription will download the model (~1.5 GB for `whisper-medium-mlx`). Subsequent runs use the cached model.
+On first launch, the app creates a Python venv at `~/.transcriber/venv`, installs `mlx-whisper` and `ffmpeg`, and downloads the Whisper model (~1.5 GB). This takes 1–3 minutes.
 
-## Setup
+## Development
 
 ```bash
 npm install
 npm start
 ```
 
+### Build DMG
+
+```bash
+npm run build
+```
+
 ## Usage
 
-1. **Drag and drop** an audio file onto the left panel, or click **Open File**
+1. **Drag and drop** an audio file onto the left panel, or click **Open Audio File**
 2. Transcription starts immediately — text streams into the main text area
 3. The **collapsible log panel** shows status and can be expanded for details
 4. Click **Stop** to cancel a running transcription
 5. Past transcriptions appear in the **History** list at the bottom — click any row to view it
 6. Use the **gear icon** to open Settings and configure the transcription command or max parallel runs
+7. **Delete** individual history items (trash icon on each row) or all history at once
 
 File paths with spaces are fully supported.
+
+### Folder watcher
+
+Enable "Watch Downloads & Documents for voice messages" in the left panel to auto-transcribe voice messages saved from **WhatsApp**, **Telegram**, or **Signal**. When a matching file appears in your Downloads or Documents folder, transcription starts automatically.
 
 ### Supported audio formats
 
@@ -48,8 +53,8 @@ mp3, wav, flac, m4a, ogg, opus, wma, aac, aiff, webm, mp4
 
 ### Settings
 
-- **Transcription Command**: The shell command used for transcription. Use `[INPUT_FILE]` as a placeholder for the audio file path. Default: `mlx_whisper --model mlx-community/whisper-medium-mlx --output-format txt --verbose True [INPUT_FILE]`
-- **Max Parallel Runs**: How many transcriptions can run simultaneously (1-10, default 3). When the limit is reached, the drop zone is disabled until a run finishes.
+- **Transcription Command**: The shell command used for transcription. Use `[INPUT_FILE]` as a placeholder for the audio file path.
+- **Max Parallel Runs**: How many transcriptions can run simultaneously (1–10, default 3).
 
 ## Architecture
 
@@ -66,16 +71,18 @@ src/
 ├── renderer.js      # UI logic, state management, IPC calls
 ├── database.js      # SQLite operations (sql.js / WASM)
 ├── config.js        # Settings persistence (~/.transcriber/config.json)
-└── transcriber.js   # Subprocess management, stdout parsing, cancellation
+├── transcriber.js   # Subprocess management, stdout parsing, cancellation
+├── setup.js         # First-launch setup: venv, mlx_whisper, ffmpeg
+└── watcher.js       # Folder watcher for auto-transcribing voice messages
 ```
 
 ## Tests
 
 ```bash
-# Unit + integration tests (22 tests, ~4s)
+# Unit + integration tests (42 tests)
 npm test
 
-# E2E smoke test inside Electron (transcribes real audio, verifies DB, loads window)
+# E2E smoke test inside Electron
 npm run test:e2e
 
 # Verify the app starts without crashing

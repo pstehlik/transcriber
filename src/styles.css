@@ -743,24 +743,6 @@ html, body {
 .btn-save:hover { background: var(--accent-hover); }
 .btn-save:active { transform: scale(0.98); }
 
-/* Startup banner */
-.startup-banner {
-  padding: 12px 20px;
-  background: #fff3cd;
-  border-bottom: 1px solid #ffc107;
-  font-size: 12px;
-  color: #664d03;
-  display: none;
-}
-.startup-banner.visible { display: block; }
-.startup-banner code {
-  background: rgba(0,0,0,0.06);
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
 /* Setup Screen */
 .setup-drag-region {
   height: 48px;

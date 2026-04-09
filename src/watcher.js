@@ -25,7 +25,8 @@ function matchesPattern(fileName) {
   return PATTERNS.some((p) => p.test(fileName));
 }
 
-function waitForStable(filePath) {
+function waitForStable(filePath, retries = 0) {
+  if (retries >= 30) return; // give up after 30s
   try {
     const size1 = fs.statSync(filePath).size;
     setTimeout(() => {
@@ -34,7 +35,7 @@ function waitForStable(filePath) {
         if (size2 === size1 && size2 > 0) {
           onFileCallback?.(filePath);
         } else {
-          waitForStable(filePath);
+          waitForStable(filePath, retries + 1);
         }
       } catch {
         // File was deleted

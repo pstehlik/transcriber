@@ -23,7 +23,7 @@
     }
   },
   "author": "Philip <p@pstehlik.com>",
-  "license": "ISC",
+  "license": "MIT",
   "description": "Local audio transcription app using MLX Whisper",
   "devDependencies": {
     "electron": "^35.0.0",

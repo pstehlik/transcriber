@@ -32,7 +32,6 @@
   const historyList = document.getElementById('history-list');
   const historyEmpty = document.getElementById('history-empty');
   const watchToggle = document.getElementById('watch-toggle-input');
-  const startupBanner = document.getElementById('startup-banner');
   const configCommand = document.getElementById('config-command');
   const stepperValue = document.getElementById('stepper-value');
   const btnSave = document.getElementById('btn-save');
