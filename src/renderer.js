@@ -98,6 +98,92 @@
     }, 1200);
   });
 
+  // WhatsApp elements
+  const waStatusIndicator = document.getElementById('wa-status-indicator');
+  const waIcon = document.getElementById('wa-icon');
+  const waStatusText = document.getElementById('wa-status-text');
+  const waQrContainer = document.getElementById('wa-qr-container');
+  const waQrCode = document.getElementById('wa-qr-code');
+  const waConnDot = document.getElementById('wa-conn-dot');
+  const waConnText = document.getElementById('wa-conn-text');
+  const btnWaConnect = document.getElementById('btn-wa-connect');
+  const btnWaDisconnect = document.getElementById('btn-wa-disconnect');
+  const btnWaLogout = document.getElementById('btn-wa-logout');
+
+  function updateWhatsAppUI(status) {
+    // Status bar on main screen
+    waStatusIndicator.className = 'status-bar-indicator ' + status;
+    const statusConfig = {
+      'connected':      { icon: '\u2714', text: 'WhatsApp connected' },
+      'connecting':     { icon: '\u25CB', text: 'WhatsApp connecting...' },
+      'disconnected':   { icon: '\u2716', text: 'WhatsApp disconnected' },
+      'not-configured': { icon: '\u25CB', text: 'WhatsApp not configured' },
+    };
+    const cfg = statusConfig[status] || statusConfig['not-configured'];
+    waIcon.textContent = cfg.icon;
+    waStatusText.textContent = cfg.text;
+
+    // Settings screen
+    waConnDot.className = 'wa-conn-dot ' + status;
+    const connLabels = {
+      'connected': 'Connected',
+      'connecting': 'Connecting...',
+      'disconnected': 'Disconnected',
+      'not-configured': 'Not configured',
+    };
+    waConnText.textContent = connLabels[status] || 'Not configured';
+
+    // Button visibility
+    const isActive = status === 'connected' || status === 'connecting';
+    btnWaConnect.style.display = isActive ? 'none' : '';
+    btnWaDisconnect.style.display = isActive ? '' : 'none';
+    btnWaLogout.style.display = (status !== 'not-configured') ? '' : 'none';
+
+    // Hide QR and show info when connected
+    if (status === 'connected') {
+      waQrContainer.style.display = 'none';
+      waQrCode.innerHTML = '';
+    }
+    document.getElementById('wa-info').style.display = status === 'connected' ? '' : 'none';
+  }
+
+  btnWaConnect.addEventListener('click', async () => {
+    waQrContainer.style.display = '';
+    waQrCode.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 20px;">Waiting for QR code...</div>';
+    await window.api.connectWhatsApp();
+  });
+
+  btnWaDisconnect.addEventListener('click', async () => {
+    await window.api.disconnectWhatsApp();
+    waQrContainer.style.display = 'none';
+    waQrCode.innerHTML = '';
+  });
+
+  btnWaLogout.addEventListener('click', async () => {
+    await window.api.logoutWhatsApp();
+    waQrContainer.style.display = 'none';
+    waQrCode.innerHTML = '';
+  });
+
+  window.api.onWhatsAppQR((dataUrl) => {
+    waQrContainer.style.display = '';
+    if (dataUrl) {
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.alt = 'WhatsApp QR Code';
+      img.width = 200;
+      img.height = 200;
+      waQrCode.innerHTML = '';
+      waQrCode.appendChild(img);
+    } else {
+      waQrCode.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); padding: 20px;">Failed to generate QR code.</div>';
+    }
+  });
+
+  window.api.onWhatsAppStatusChange((status) => {
+    updateWhatsAppUI(status);
+  });
+
   // Watch toggle
   watchToggle.addEventListener('change', async () => {
     await window.api.toggleWatch(watchToggle.checked);
@@ -462,6 +548,10 @@
     // Load watch state
     const watching = await window.api.getWatchState();
     watchToggle.checked = watching;
+
+    // Load WhatsApp status
+    const waStatus = await window.api.getWhatsAppStatus();
+    updateWhatsAppUI(waStatus);
 
     // Load history
     const transcriptions = await window.api.getTranscriptions();

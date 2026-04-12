@@ -134,6 +134,14 @@
       </div>
     </div>
 
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+      <span class="status-bar-indicator not-configured" id="wa-status-indicator">
+        <span class="wa-icon" id="wa-icon">&#9675;</span>
+        <span id="wa-status-text">WhatsApp not configured</span>
+      </span>
+    </div>
+
     <!-- History Panel -->
     <div class="history-panel">
       <div class="history-header">
@@ -180,6 +188,35 @@
         </div>
 
         <button class="btn-save" id="btn-save">Save</button>
+      </div>
+
+      <div class="config-card">
+        <div class="config-title">WhatsApp Integration</div>
+
+        <div class="wa-warning" id="wa-warning">
+          <strong>Note:</strong> This uses an unofficial WhatsApp Web protocol. Your account could be restricted by WhatsApp. Use at your own risk.
+        </div>
+
+        <div class="wa-status-section" id="wa-status-section">
+          <div class="wa-connection-status" id="wa-connection-status">
+            <span class="wa-conn-dot not-configured" id="wa-conn-dot"></span>
+            <span id="wa-conn-text">Not configured</span>
+          </div>
+          <div class="wa-info" id="wa-info" style="display: none;">
+            All incoming voice messages in 1-on-1 chats (not group chats) will be transcribed automatically. This integration uses an unofficial, reverse-engineered WhatsApp Web protocol and is not affiliated with or endorsed by WhatsApp/Meta. It may stop working without notice if WhatsApp changes their protocol.
+          </div>
+        </div>
+
+        <div class="wa-qr-container" id="wa-qr-container" style="display: none;">
+          <p class="wa-qr-instructions">Scan this QR code with WhatsApp on your phone:<br>Settings &rarr; Linked Devices &rarr; Link a Device</p>
+          <div class="wa-qr-code" id="wa-qr-code"></div>
+        </div>
+
+        <div class="wa-actions">
+          <button class="btn-wa-connect" id="btn-wa-connect">Connect WhatsApp</button>
+          <button class="btn-wa-disconnect" id="btn-wa-disconnect" style="display: none;">Disconnect</button>
+          <button class="btn-wa-logout" id="btn-wa-logout" style="display: none;">Logout</button>
+        </div>
       </div>
     </div>
   </div>

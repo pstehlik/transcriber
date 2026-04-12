@@ -7,8 +7,9 @@ const fs = require('fs');
 const database = require('../src/database');
 const config = require('../src/config');
 const transcriber = require('../src/transcriber');
+const setup = require('../src/setup');
 
-const appDataPath = path.join(process.env.HOME, '.transcriber');
+const appDataPath = setup.getAppDataPath();
 const dbPath = path.join(appDataPath, 'transcriptions.db');
 const testAudio = path.join(__dirname, 'test_audio', 'test-message-1.mp3');
 

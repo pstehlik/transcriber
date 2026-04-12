@@ -39,4 +39,15 @@ contextBridge.exposeInMainWorld('api', {
       callback(id, fileName, metadata)
     );
   },
+
+  connectWhatsApp: () => ipcRenderer.invoke('whatsapp-connect'),
+  disconnectWhatsApp: () => ipcRenderer.invoke('whatsapp-disconnect'),
+  logoutWhatsApp: () => ipcRenderer.invoke('whatsapp-logout'),
+  getWhatsAppStatus: () => ipcRenderer.invoke('whatsapp-status'),
+  onWhatsAppQR: (callback) => {
+    ipcRenderer.on('whatsapp-qr', (_event, qr) => callback(qr));
+  },
+  onWhatsAppStatusChange: (callback) => {
+    ipcRenderer.on('whatsapp-status-change', (_event, status) => callback(status));
+  },
 });

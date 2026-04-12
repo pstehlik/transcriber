@@ -8,7 +8,7 @@ const { startTranscription, cancelTranscription } = require('../src/transcriber'
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const TEST_AUDIO = path.join(__dirname, 'test_audio', 'test-message-1.mp3');
-const COMMAND = 'mlx_whisper --model mlx-community/whisper-medium-mlx --output-format txt --verbose True [INPUT_FILE]';
+const COMMAND = 'mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbose True [INPUT_FILE]';
 
 describe('integration: transcription', () => {
   it('transcribes a test audio file and receives segments', async () => {

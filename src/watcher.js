@@ -92,7 +92,7 @@ function start(callback) {
       const w = fs.watch(dir, { persistent: false }, () => {
         debouncedScan();
       });
-      w.on('error', () => {});
+      w.on('error', (err) => { console.error('Watcher error on', dir + ':', err.message); });
       fsWatchers.push(w);
     } catch {
       // directory might not exist

@@ -43,6 +43,18 @@ npm run build
 
 File paths with spaces are fully supported.
 
+### WhatsApp integration
+
+Link your WhatsApp account to automatically transcribe incoming voice messages from one-on-one chats:
+
+1. Open **Settings** (gear icon) and scroll to **WhatsApp Integration**
+2. Click **Connect WhatsApp** and scan the QR code with your phone (Settings → Linked Devices → Link a Device)
+3. Once connected, incoming voice messages are automatically downloaded and transcribed
+
+A status bar at the bottom of the main screen shows the connection state: green checkmark (connected), red cross (disconnected), or gray circle (not configured). The connection auto-reconnects on temporary disconnects and persists across app restarts.
+
+**Note:** This uses an unofficial WhatsApp Web protocol (`@whiskeysockets/baileys`). Your account could be restricted by WhatsApp. Use at your own risk.
+
 ### Folder watcher
 
 Enable "Watch Downloads & Documents for voice messages" in the left panel to auto-transcribe voice messages saved from **WhatsApp**, **Telegram**, or **Signal**. When a matching file appears in your Downloads or Documents folder, transcription starts automatically.
@@ -73,13 +85,14 @@ src/
 ├── config.js        # Settings persistence (~/.transcriber/config.json)
 ├── transcriber.js   # Subprocess management, stdout parsing, cancellation
 ├── setup.js         # First-launch setup: venv, mlx_whisper, ffmpeg
+├── whatsapp.js      # WhatsApp Web client: QR linking, voice message download
 └── watcher.js       # Folder watcher for auto-transcribing voice messages
 ```
 
 ## Tests
 
 ```bash
-# Unit + integration tests (42 tests)
+# Unit + integration tests (55 tests)
 npm test
 
 # E2E smoke test inside Electron

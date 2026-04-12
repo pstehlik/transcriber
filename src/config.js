@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULTS = {
-  command: 'mlx_whisper --model mlx-community/whisper-medium-mlx --output-format txt --verbose True [INPUT_FILE]',
+  command: 'mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbose True [INPUT_FILE]',
   maxParallelRuns: 3,
   watchFolders: false,
 };

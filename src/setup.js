@@ -3,18 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const appDataPath = path.join(process.env.HOME || process.env.USERPROFILE, '.transcriber');
-const venvPath = path.join(appDataPath, 'venv');
-const venvBin = path.join(venvPath, 'bin');
-const mlxWhisperBin = path.join(venvBin, 'mlx_whisper');
-const pipBin = path.join(venvBin, 'pip');
-
-function getVenvBinPath() {
-  return venvBin;
+function getAppDataPath() {
+  return process.env.TRANSCRIBER_DATA_DIR ||
+    path.join(process.env.HOME || process.env.USERPROFILE, '.transcriber');
 }
 
+function getVenvPath() { return path.join(getAppDataPath(), 'venv'); }
+function getVenvBinPath() { return path.join(getVenvPath(), 'bin'); }
+function getMlxWhisperBin() { return path.join(getVenvBinPath(), 'mlx_whisper'); }
+function getPipBin() { return path.join(getVenvBinPath(), 'pip'); }
+
 function isSetupComplete() {
-  return fs.existsSync(mlxWhisperBin);
+  return fs.existsSync(getMlxWhisperBin());
 }
 
 function getEnvWithPaths() {
@@ -114,10 +114,10 @@ async function runSetup(onProgress) {
   onProgress?.(pythonVersion);
 
   onProgress?.('Creating Python environment...');
-  await runCommand('python3', ['-m', 'venv', venvPath], onProgress);
+  await runCommand('python3', ['-m', 'venv', getVenvPath()], onProgress);
 
   onProgress?.('Installing MLX Whisper (this may take a few minutes)...');
-  await runCommand(pipBin, ['install', 'mlx-whisper'], onProgress);
+  await runCommand(getPipBin(), ['install', 'mlx-whisper'], onProgress);
 
   if (!isSetupComplete()) {
     throw new Error('Installation completed but mlx_whisper binary not found.');
@@ -127,8 +127,8 @@ async function runSetup(onProgress) {
   if (!hasFFmpeg) {
     onProgress?.('Installing ffmpeg...');
     try {
-      await runCommand(pipBin, ['install', 'static-ffmpeg'], onProgress);
-      const pythonBin = path.join(venvBin, 'python3');
+      await runCommand(getPipBin(), ['install', 'static-ffmpeg'], onProgress);
+      const pythonBin = path.join(getVenvBinPath(), 'python3');
       await runCommand(pythonBin, ['-c', [
         'import static_ffmpeg, os, sys',
         'ffmpeg, probe = static_ffmpeg.run.get_or_fetch_platform_executables_else_raise()',
@@ -152,4 +152,4 @@ async function runSetup(onProgress) {
   onProgress?.('Setup complete! First transcription will download the language model (~1.5 GB).');
 }
 
-module.exports = { getVenvBinPath, isSetupComplete, runSetup };
+module.exports = { getAppDataPath, getVenvBinPath, isSetupComplete, runSetup };

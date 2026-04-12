@@ -6,13 +6,17 @@ const config = require('./config');
 const transcriber = require('./transcriber');
 const watcher = require('./watcher');
 const setup = require('./setup');
+const whatsapp = require('./whatsapp');
 
 let mainWindow = null;
 
-const appDataPath = path.join(
-  process.env.HOME || process.env.USERPROFILE,
-  '.transcriber'
-);
+function sendToRenderer(channel, ...args) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, ...args);
+  }
+}
+
+const appDataPath = setup.getAppDataPath();
 const dbPath = path.join(appDataPath, 'transcriptions.db');
 
 function ensureAppData() {
@@ -72,19 +76,67 @@ function startTranscriptionRun(id, filePath, command) {
   transcriber.startTranscription(id, filePath, command, {
     onSegment(segmentText) {
       database.appendText(dbPath, id, (segmentText ? ' ' : '') + segmentText);
-      mainWindow?.webContents.send('transcription-segment', id, segmentText);
+      sendToRenderer('transcription-segment', id, segmentText);
     },
     onLog(level, message) {
-      mainWindow?.webContents.send('transcription-log', id, level, message);
+      sendToRenderer('transcription-log', id, level, message);
     },
     onError(message) {
-      mainWindow?.webContents.send('transcription-log', id, 'error', message);
+      sendToRenderer('transcription-log', id, 'error', message);
     },
     onComplete(fullText, status) {
       const finalStatus = status || 'completed';
       database.completeTranscription(dbPath, id, finalStatus);
-      mainWindow?.webContents.send('transcription-complete', id, finalStatus);
+      sendToRenderer('transcription-complete', id, finalStatus);
       processPendingWatchFiles();
+    },
+  });
+}
+
+function startWhatsApp() {
+  whatsapp.connect({
+    async onQR(qr) {
+      try {
+        const QRCode = require('qrcode');
+        const dataUrl = await QRCode.toDataURL(qr, { width: 200, margin: 1 });
+        sendToRenderer('whatsapp-qr', dataUrl);
+      } catch {
+        sendToRenderer('whatsapp-qr', null);
+      }
+    },
+    onStatusChange(status) {
+      sendToRenderer('whatsapp-status-change', status);
+    },
+    async onVoiceMessage({ filePath, fileName, senderName }) {
+      try {
+        const exists = await database.hasTranscriptionForPath(dbPath, filePath);
+        if (exists) return;
+
+        const cfg = config.load();
+        if (transcriber.getActiveCount() >= cfg.maxParallelRuns) {
+          if (!pendingWatchFiles.includes(filePath)) {
+            pendingWatchFiles.push(filePath);
+          }
+          return;
+        }
+
+        const metadata = await getFileMetadata(filePath);
+        if (metadata.error) return;
+
+        const displayName = `${senderName}: ${fileName}`;
+        const id = await database.insertTranscription(dbPath, {
+          filePath,
+          fileName: displayName,
+          fileSize: metadata.fileSize,
+          duration: metadata.duration,
+          format: metadata.format,
+        });
+
+        sendToRenderer('watch-transcription-started', Number(id), displayName, metadata);
+        startTranscriptionRun(Number(id), filePath, cfg.command);
+      } catch (err) {
+        console.error('WhatsApp transcription error:', err);
+      }
     },
   });
 }
@@ -122,7 +174,7 @@ async function handleWatchedFile(filePath) {
     format: metadata.format,
   });
 
-  mainWindow?.webContents.send('watch-transcription-started', Number(id), metadata.fileName, metadata);
+  sendToRenderer('watch-transcription-started', Number(id), metadata.fileName, metadata);
   startTranscriptionRun(Number(id), filePath, cfg.command);
 }
 
@@ -223,6 +275,25 @@ function setupIPC() {
     return database.deleteAllTranscriptions(dbPath);
   });
 
+  ipcMain.handle('whatsapp-connect', async () => {
+    startWhatsApp();
+    return true;
+  });
+
+  ipcMain.handle('whatsapp-disconnect', async () => {
+    whatsapp.disconnect();
+    return true;
+  });
+
+  ipcMain.handle('whatsapp-logout', async () => {
+    whatsapp.logout();
+    return true;
+  });
+
+  ipcMain.handle('whatsapp-status', async () => {
+    return whatsapp.getStatus();
+  });
+
   ipcMain.handle('check-setup-complete', () => {
     return setup.isSetupComplete();
   });
@@ -230,7 +301,7 @@ function setupIPC() {
   ipcMain.handle('run-setup', async () => {
     try {
       await setup.runSetup((message) => {
-        mainWindow?.webContents.send('setup-progress', message);
+        sendToRenderer('setup-progress', message);
       });
       return { success: true };
     } catch (err) {
@@ -250,9 +321,14 @@ app.whenReady().then(async () => {
   if (cfg.watchFolders) {
     startWatcher();
   }
+
+  if (whatsapp.isConfigured()) {
+    startWhatsApp();
+  }
 });
 
 app.on('window-all-closed', () => {
+  whatsapp.disconnect();
   watcher.stop();
   database.close();
   app.quit();
