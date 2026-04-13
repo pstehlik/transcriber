@@ -9,6 +9,13 @@
   let runStatuses = {};    // id -> 'running' | 'completed' | 'error' | 'cancelled'
   let maxParallelRuns = 3;
 
+  const MODEL_INFO = {
+    tiny:   { id: 'mlx-community/whisper-tiny-mlx',      accuracy: 'Basic',  speed: 'Fastest',  size: '75 MB',  ram: '1 GB' },
+    small:  { id: 'mlx-community/whisper-small-mlx',      accuracy: 'Good',   speed: 'Fast',     size: '500 MB', ram: '2 GB' },
+    medium: { id: 'mlx-community/whisper-medium-mlx',      accuracy: 'Strong', speed: 'Moderate', size: '1.5 GB', ram: '4 GB' },
+    large:  { id: 'mlx-community/whisper-large-v3-mlx',   accuracy: 'Best',   speed: 'Slower',   size: '3 GB',   ram: '6 GB' },
+  };
+
   // Elements
   const screenMain = document.getElementById('screen-main');
   const screenConfig = document.getElementById('screen-config');
@@ -33,15 +40,117 @@
   const historyEmpty = document.getElementById('history-empty');
   const watchToggle = document.getElementById('watch-toggle-input');
   const configCommand = document.getElementById('config-command');
+  const configModel = document.getElementById('config-model');
+  const modelInfoEl = document.getElementById('model-info');
+  const modelDownloadEl = document.getElementById('model-download');
+  const modelDownloadedEl = document.getElementById('model-downloaded');
+  const modelDownloadProgress = document.getElementById('model-download-progress');
+  const btnDownloadModel = document.getElementById('btn-download-model');
+  const advancedToggle = document.getElementById('advanced-toggle');
+  const advancedChevron = document.getElementById('advanced-chevron');
+  const advancedContent = document.getElementById('advanced-content');
   const stepperValue = document.getElementById('stepper-value');
   const btnSave = document.getElementById('btn-save');
+
+  // Model helpers
+  function updateModelDescription(model) {
+    const info = MODEL_INFO[model];
+    if (!info) return;
+    modelInfoEl.textContent = '';
+    const rows = [
+      ['Accuracy', info.accuracy],
+      ['Speed', info.speed],
+      ['Model size', info.size],
+      ['Recommended RAM', info.ram],
+    ];
+    for (const [label, value] of rows) {
+      const row = document.createElement('div');
+      row.className = 'model-info-row';
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'model-info-label';
+      labelSpan.textContent = label;
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'model-info-value';
+      valueSpan.textContent = value;
+      row.appendChild(labelSpan);
+      row.appendChild(valueSpan);
+      modelInfoEl.appendChild(row);
+    }
+  }
+
+  async function checkModelDownloadStatus(model) {
+    const info = MODEL_INFO[model];
+    if (!info) return;
+    modelDownloadProgress.style.display = 'none';
+    try {
+      const downloaded = await window.api.checkModelDownloaded(info.id);
+      modelDownloadEl.style.display = downloaded ? 'none' : '';
+      modelDownloadedEl.style.display = downloaded ? '' : 'none';
+      btnDownloadModel.disabled = false;
+      btnDownloadModel.textContent = 'Download Model Now';
+    } catch {
+      modelDownloadEl.style.display = 'none';
+      modelDownloadedEl.style.display = 'none';
+    }
+  }
+
+  function updateCommandModel(model) {
+    const info = MODEL_INFO[model];
+    if (!info) return;
+    configCommand.value = configCommand.value.replace(/--model\s+\S+/, `--model ${info.id}`);
+  }
+
+  configModel.addEventListener('change', () => {
+    const model = configModel.value;
+    updateModelDescription(model);
+    updateCommandModel(model);
+    checkModelDownloadStatus(model);
+  });
+
+  // Advanced config toggle
+  advancedToggle.addEventListener('click', () => {
+    advancedContent.classList.toggle('visible');
+    advancedChevron.classList.toggle('expanded');
+  });
+
+  // Download model button
+  btnDownloadModel.addEventListener('click', async () => {
+    const model = configModel.value;
+    const info = MODEL_INFO[model];
+    if (!info) return;
+    btnDownloadModel.disabled = true;
+    btnDownloadModel.textContent = 'Downloading...';
+    modelDownloadProgress.style.display = '';
+    modelDownloadProgress.textContent = 'Starting download...';
+    const result = await window.api.downloadModel(info.id);
+    if (result.success) {
+      modelDownloadEl.style.display = 'none';
+      modelDownloadedEl.style.display = '';
+      modelDownloadProgress.style.display = 'none';
+    } else {
+      btnDownloadModel.disabled = false;
+      btnDownloadModel.textContent = 'Download Model Now';
+      modelDownloadProgress.textContent = 'Download failed: ' + (result.error || 'Unknown error');
+    }
+  });
+
+  window.api.onModelDownloadProgress((message) => {
+    modelDownloadProgress.textContent = message;
+  });
 
   // Screen switching
   document.getElementById('btn-settings').addEventListener('click', async () => {
     const cfg = await window.api.getConfig();
     configCommand.value = cfg.command;
+    stepperVal = cfg.maxParallelRuns;
     stepperValue.textContent = cfg.maxParallelRuns;
     maxParallelRuns = cfg.maxParallelRuns;
+    const model = cfg.model || 'small';
+    configModel.value = model;
+    updateModelDescription(model);
+    checkModelDownloadStatus(model);
+    advancedContent.classList.remove('visible');
+    advancedChevron.classList.remove('expanded');
     screenMain.classList.remove('active');
     screenConfig.classList.add('active');
   });
@@ -86,6 +195,7 @@
     await window.api.saveConfig({
       command: configCommand.value,
       maxParallelRuns: stepperVal,
+      model: configModel.value,
     });
     maxParallelRuns = stepperVal;
     const orig = btnSave.textContent;
@@ -503,29 +613,39 @@
       screenMain.classList.remove('active');
       screenSetup.classList.add('active');
 
-      window.api.onSetupProgress((message) => {
-        setupMessage.textContent = message;
-        const entry = document.createElement('div');
-        entry.textContent = message;
-        setupLog.appendChild(entry);
-        setupLog.scrollTop = setupLog.scrollHeight;
-      });
+      const welcomeState = document.getElementById('setup-welcome');
+      const progressState = document.getElementById('setup-progress-state');
+      welcomeState.style.display = '';
+      progressState.style.display = 'none';
 
-      window.api.runSetup().then((result) => {
-        if (result.success) {
-          setupMessage.textContent = 'Ready!';
-          setupSpinner.classList.add('done');
-          setTimeout(() => {
-            screenSetup.classList.remove('active');
-            screenMain.classList.add('active');
-            resolve();
-          }, 800);
-        } else {
-          setupMessage.textContent = 'Setup failed';
-          setupSpinner.style.display = 'none';
-          document.getElementById('setup-error').classList.add('visible');
-          document.getElementById('setup-error-detail').textContent = result.error;
-        }
+      document.getElementById('btn-start-setup').addEventListener('click', () => {
+        welcomeState.style.display = 'none';
+        progressState.style.display = '';
+
+        window.api.onSetupProgress((message) => {
+          setupMessage.textContent = message;
+          const entry = document.createElement('div');
+          entry.textContent = message;
+          setupLog.appendChild(entry);
+          setupLog.scrollTop = setupLog.scrollHeight;
+        });
+
+        window.api.runSetup().then((result) => {
+          if (result.success) {
+            setupMessage.textContent = 'Ready!';
+            setupSpinner.classList.add('done');
+            setTimeout(() => {
+              screenSetup.classList.remove('active');
+              screenMain.classList.add('active');
+              resolve();
+            }, 800);
+          } else {
+            setupMessage.textContent = 'Setup failed';
+            setupSpinner.style.display = 'none';
+            document.getElementById('setup-error').classList.add('visible');
+            document.getElementById('setup-error-detail').textContent = result.error;
+          }
+        });
       });
     });
   }

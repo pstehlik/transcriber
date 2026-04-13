@@ -14,8 +14,8 @@ The app is distributed as a `.dmg` and handles all Python/mlx_whisper/ffmpeg set
 
 ## Tech stack
 
-- **Electron 35** (main + renderer process, contextIsolation enabled, hiddenInset title bar)
-- **electron-builder** for packaging as macOS DMG (unsigned, `identity: null`)
+- **Electron 41** (main + renderer process, contextIsolation enabled, hiddenInset title bar)
+- **electron-builder** for packaging as signed/notarized macOS DMG
 - **sql.js** (pure WASM SQLite) for local persistence — chosen over better-sqlite3 to avoid native module ABI mismatches between system Node and Electron
 - **music-metadata** for audio file metadata (duration, format)
 - **mlx_whisper** CLI (external Python tool, spawned as subprocess, installed into a managed venv)
@@ -43,14 +43,15 @@ The app is distributed as a `.dmg` and handles all Python/mlx_whisper/ffmpeg set
 
 ## First-launch setup flow
 
-On first launch the renderer checks `setup.isSetupComplete()` (does `~/.transcriber/venv/bin/mlx_whisper` exist?) and falls back to a `which mlx_whisper` PATH check. If neither succeeds, a setup screen is shown and the following steps run automatically:
+On first launch the renderer checks `setup.isSetupComplete()` (does `~/.transcriber/venv/bin/mlx_whisper` exist?) and falls back to a `which mlx_whisper` PATH check. If neither succeeds, a setup screen is shown with a welcome message explaining what will be downloaded and a "Start Initialization" button. The user must click the button to begin setup:
 
 1. **Platform check** — Apple Silicon + macOS 14+; clear error if not met
 2. **Python 3 check** — if missing, shows message about the Xcode CLT install dialog
 3. **Create venv** — `python3 -m venv ~/.transcriber/venv/`
 4. **pip install mlx-whisper** — installs MLX, numpy, whisper, and dependencies into the venv
 5. **ffmpeg check** — if ffmpeg is not on PATH (including Homebrew locations), installs `static-ffmpeg` via pip and symlinks the binary into `venv/bin/`
-6. **Done** — transitions to the main app; first transcription will also download the Whisper model (~1.5 GB) from Hugging Face via HTTP (no git-lfs needed)
+6. **Model download** — downloads the default Whisper model (~1.5 GB) via `huggingface_hub.snapshot_download()` so the first transcription starts immediately without a long wait
+7. **Done** — transitions to the main app, ready to transcribe
 
 If a user already has mlx_whisper on their system PATH (e.g. installed via pip globally), the setup screen is skipped entirely.
 
@@ -58,7 +59,7 @@ If a user already has mlx_whisper on their system PATH (e.g. installed via pip g
 
 ```bash
 npm start              # Launch the Electron app
-npm run build          # Package as macOS DMG (output in dist/)
+npm run build          # Package as signed/notarized macOS DMG (output in dist/; requires .env with signing credentials)
 npm test               # Run unit + integration tests (vitest, system Node)
 npm run test:e2e       # Run e2e smoke test inside Electron (transcribes audio, verifies DB, loads window)
 npm run test:launch    # Verify the app starts without crashing
@@ -66,6 +67,14 @@ npm run test:all       # Run all of the above sequentially
 npm run test:blank-install  # Pre-release: fresh venv + pip install + transcribe in temp dir (~5 min)
 npm run test:dmg            # Pre-release: mount built DMG + launch with isolated data dir
 ```
+
+### Release testing
+
+Before tagging a release, run the full test suite (`npm run test:all`), then the pre-release tests:
+
+1. `npm run test:blank-install` — creates a temp data dir, runs the full first-launch setup (venv + pip + model download), transcribes a test file, and cleans up. Takes ~5 minutes depending on network speed. Validates the setup flow end-to-end.
+2. `npm run build` — build the DMG (requires `.env` with `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_SPECIFIC_PASSWORD` for signing/notarization).
+3. `npm run test:dmg` — mounts the built DMG, launches the app with an isolated data dir, and verifies it doesn't crash.
 
 ## Project structure
 
@@ -80,6 +89,7 @@ npm run test:dmg            # Pre-release: mount built DMG + launch with isolate
 - `src/watcher.js` — Watches ~/Downloads and ~/Documents for voice message files (Telegram .ogg, Signal .m4a, WhatsApp .opus) and auto-transcribes new arrivals
 - `src/index.html` + `src/styles.css` — Minimal monochrome UI with setup, main, and config screens
 - `build/icon.icns` — macOS app icon (generated from `assets/picsvg_download.svg`)
+- `build/entitlements.mac.plist` — macOS entitlements for hardened runtime (JIT, unsigned memory, dyld env vars)
 - `assets/` — Source SVG for the app icon
 - `test/*.test.mjs` — Unit tests for database, config, transcriber, watcher, whatsapp + integration test (real mlx_whisper)
 - `test/e2e-smoke.js` — Full e2e test that runs inside Electron
@@ -125,10 +135,10 @@ mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbos
 ## Building and distributing
 
 ```bash
-npm run build    # produces dist/Transcriber-1.0.0-arm64.dmg (~106 MB)
+npm run build    # produces dist/Transcriber-<version>-arm64.dmg (~106 MB)
 ```
 
-The DMG is unsigned (`identity: null` in electron-builder config). Recipients need to right-click > Open on first launch to bypass Gatekeeper. The build config is in the `"build"` field of `package.json`.
+The build uses hardened runtime and Apple notarization. Signing credentials (Apple ID, team ID, app-specific password) are loaded from a `.env` file (gitignored) via the build script. The entitlements plist at `build/entitlements.mac.plist` grants JIT, unsigned executable memory, and dyld environment variables — required for Electron and the spawned Python subprocesses.
 
 To distribute: send the DMG file. The recipient drags Transcriber to Applications, opens it, and the setup screen handles everything else automatically.
 

@@ -6,5 +6,11 @@ test/test_config/
 # mlx_whisper output files
 *.txt
 
+# signing credentials
+.env
+
+# planning docs
+todo/
+
 # electron-builder output
 dist/

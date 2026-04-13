@@ -298,11 +298,29 @@ function setupIPC() {
     return setup.isSetupComplete();
   });
 
+  ipcMain.handle('check-model-downloaded', async (_event, modelId) => {
+    return setup.isModelDownloaded(modelId);
+  });
+
+  ipcMain.handle('download-model', async (_event, modelId) => {
+    try {
+      await setup.downloadModel(modelId, (message) => {
+        sendToRenderer('model-download-progress', message);
+      });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('run-setup', async () => {
     try {
+      const cfg = config.load();
+      const modelMatch = cfg.command.match(/--model\s+(\S+)/);
+      const modelName = modelMatch ? modelMatch[1] : null;
       await setup.runSetup((message) => {
         sendToRenderer('setup-progress', message);
-      });
+      }, modelName);
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };

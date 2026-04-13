@@ -16,15 +16,31 @@
     <div class="setup-container">
       <div class="setup-icon">&#x1F4E2;</div>
       <h1 class="setup-title">Transcriber</h1>
-      <p class="setup-subtitle">Setting up local transcription...</p>
-      <div class="setup-progress">
-        <div class="setup-spinner" id="setup-spinner"><div class="spinner"></div></div>
-        <div class="setup-message" id="setup-message">Preparing...</div>
+
+      <!-- Welcome state (before setup starts) -->
+      <div id="setup-welcome">
+        <p class="setup-subtitle">Welcome! A one-time setup is needed before you can start transcribing.</p>
+        <p class="setup-note">This will download and install:<br>
+          &bull; MLX Whisper (speech recognition engine)<br>
+          &bull; Language model (~1.5 GB)<br>
+          &bull; ffmpeg (audio processing, if not already installed)<br><br>
+          Depending on your internet speed, this takes 2&ndash;5 minutes.<br>
+          All processing stays on your Mac &mdash; nothing is uploaded.<br><br>
+          Requires Apple Silicon (M1+) and macOS 14 Sonoma or later.</p>
+        <button class="btn-start-setup" id="btn-start-setup">Start Initialization</button>
       </div>
-      <div class="setup-log" id="setup-log"></div>
-      <p class="setup-note">Installs MLX Whisper for private, on-device transcription.<br>No data leaves your Mac. This takes 1&ndash;3 minutes.<br><br>Requires Apple Silicon (M1+) and macOS 14 Sonoma or later.</p>
-      <div class="setup-error" id="setup-error">
-        <pre id="setup-error-detail"></pre>
+
+      <!-- Progress state (during setup) -->
+      <div id="setup-progress-state" style="display: none;">
+        <p class="setup-subtitle">Setting up local transcription...</p>
+        <div class="setup-progress">
+          <div class="setup-spinner" id="setup-spinner"><div class="spinner"></div></div>
+          <div class="setup-message" id="setup-message">Preparing...</div>
+        </div>
+        <div class="setup-log" id="setup-log"></div>
+        <div class="setup-error" id="setup-error">
+          <pre id="setup-error-detail"></pre>
+        </div>
       </div>
     </div>
   </div>
@@ -172,9 +188,21 @@
         <div class="config-title">Settings</div>
 
         <div class="form-group">
-          <label class="form-label">Transcription Command</label>
-          <textarea class="form-textarea" id="config-command" rows="3" spellcheck="false"></textarea>
-          <div class="form-help">Use <strong>[INPUT_FILE]</strong> as a placeholder for the audio file path. It will be replaced with the actual file path at runtime.</div>
+          <label class="form-label">Transcription Accuracy</label>
+          <div class="form-help" style="margin-top: 0; margin-bottom: 8px;">Which model do you want to use for audio transcription?</div>
+          <select class="form-select" id="config-model">
+            <option value="tiny">Tiny</option>
+            <option value="small" selected>Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+          </select>
+          <div class="model-info" id="model-info"></div>
+          <div class="model-download" id="model-download" style="display: none;">
+            <button class="btn-download" id="btn-download-model">Download Model Now</button>
+            <div class="form-help">If you don't download the model now, the first transcription will automatically download the model. In this case, be prepared for the first transcription to be slower.</div>
+          </div>
+          <div class="model-downloaded" id="model-downloaded" style="display: none;">&#10003; Model downloaded</div>
+          <div class="model-download-progress" id="model-download-progress" style="display: none;"></div>
         </div>
 
         <div class="form-group">
@@ -185,6 +213,20 @@
             <button class="stepper-btn" id="stepper-inc">+</button>
           </div>
           <div class="form-help">Maximum number of transcriptions that can run simultaneously (1 &ndash; 10).</div>
+        </div>
+
+        <div class="form-group">
+          <div class="advanced-toggle" id="advanced-toggle">
+            <svg class="advanced-chevron" id="advanced-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            <span>Advanced Configuration</span>
+          </div>
+          <div class="advanced-content" id="advanced-content">
+            <label class="form-label">Transcription Command</label>
+            <textarea class="form-textarea" id="config-command" rows="3" spellcheck="false"></textarea>
+            <div class="form-help">Use <strong>[INPUT_FILE]</strong> as a placeholder for the audio file path. It will be replaced with the actual file path at runtime.</div>
+          </div>
         </div>
 
         <button class="btn-save" id="btn-save">Save</button>

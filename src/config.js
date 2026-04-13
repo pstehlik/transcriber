@@ -5,6 +5,7 @@ const DEFAULTS = {
   command: 'mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbose True [INPUT_FILE]',
   maxParallelRuns: 3,
   watchFolders: false,
+  model: 'small',
 };
 
 let configPath = null;

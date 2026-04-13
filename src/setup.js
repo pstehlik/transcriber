@@ -93,7 +93,7 @@ function checkPlatform() {
   return null;
 }
 
-async function runSetup(onProgress) {
+async function runSetup(onProgress, modelName) {
   onProgress?.('Checking system requirements...');
   const platformError = checkPlatform();
   if (platformError) {
@@ -149,7 +149,36 @@ async function runSetup(onProgress) {
     }
   }
 
-  onProgress?.('Setup complete! First transcription will download the language model (~1.5 GB).');
+  if (modelName) {
+    onProgress?.(`Downloading language model (${modelName})... This may take a few minutes.`);
+    const pythonBin = path.join(getVenvBinPath(), 'python3');
+    await runCommand(pythonBin, ['-c',
+      `from huggingface_hub import snapshot_download; snapshot_download("${modelName}")`
+    ], onProgress);
+    onProgress?.('Language model downloaded.');
+  }
+
+  onProgress?.('Setup complete!');
 }
 
-module.exports = { getAppDataPath, getVenvBinPath, isSetupComplete, runSetup };
+function isModelDownloaded(modelId) {
+  const cacheDir = path.join(os.homedir(), '.cache', 'huggingface', 'hub',
+    'models--' + modelId.replace('/', '--'), 'snapshots');
+  try {
+    const entries = fs.readdirSync(cacheDir);
+    return entries.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function downloadModel(modelId, onProgress) {
+  onProgress?.(`Downloading model ${modelId}...`);
+  const pythonBin = path.join(getVenvBinPath(), 'python3');
+  await runCommand(pythonBin, ['-c',
+    `from huggingface_hub import snapshot_download; snapshot_download("${modelId}")`
+  ], onProgress);
+  onProgress?.('Model downloaded.');
+}
+
+module.exports = { getAppDataPath, getVenvBinPath, isSetupComplete, runSetup, isModelDownloaded, downloadModel };

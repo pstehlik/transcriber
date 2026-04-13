@@ -1,10 +1,10 @@
 {
   "name": "transcriber",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac",
+    "build": "set -a && source .env && set +a && electron-builder --mac",
     "test": "vitest run",
     "test:e2e": "electron test/e2e-smoke.js",
     "test:launch": "bash test/smoke-launch.sh",
@@ -18,7 +18,11 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.productivity",
-      "identity": null
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
     },
     "dmg": {
       "title": "Transcriber"
@@ -28,13 +32,13 @@
   "license": "MIT",
   "description": "Local audio transcription app using MLX Whisper",
   "devDependencies": {
-    "electron": "^35.0.0",
+    "electron": "^41.2.0",
     "electron-builder": "^26.0.0",
     "vitest": "^3.1.1"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
-    "music-metadata": "^10.7.2",
+    "music-metadata": "^11.12.3",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",
     "sql.js": "^1.14.1"
