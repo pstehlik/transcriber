@@ -6,6 +6,10 @@ Transcriber is an Electron desktop app for macOS that transcribes audio files lo
 
 The app is distributed as a `.dmg` and handles all Python/mlx_whisper/ffmpeg setup automatically on first launch.
 
+## Design principle
+
+**Fewest clicks/interactions possible to get to a transcript.** Every UX decision should be evaluated against this: if a user has to click, scroll, or hunt to read a transcript that the app already produced for them, that's a regression. Auto-trigger over manual where safe (e.g. folder/WhatsApp watchers auto-transcribe and auto-focus+select the new run so the transcript is immediately on screen). Don't add confirmation dialogs, intermediate screens, or "open in viewer" steps when the content can just appear.
+
 ## System requirements
 
 - **Apple Silicon** (M1 or later) — MLX does not run on Intel Macs

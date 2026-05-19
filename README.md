@@ -4,6 +4,8 @@ A minimal macOS Electron app for local audio transcription using [MLX Whisper](h
 
 Drop an audio file (or click "Open Audio File"), and the app transcribes it locally using `mlx_whisper` — no uploads, no cloud, no API keys. Transcription text streams into the UI segment-by-segment as it's processed.
 
+**Design principle:** the fewest possible clicks/interactions to get to a transcript. Auto-triggered transcriptions (from the folder watcher or WhatsApp integration) automatically bring the window to the front and select the new run, so the streaming text is on screen the moment it starts — no clicking through history required.
+
 ## Requirements
 
 - macOS 14 (Sonoma) or later

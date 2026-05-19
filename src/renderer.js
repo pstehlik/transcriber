@@ -305,6 +305,14 @@
     runLogs[id] = [];
     runStatuses[id] = 'running';
     addHistoryRow(id, new Date().toLocaleString(), '', fileName, 'running');
+    currentRunId = id;
+    showFileMeta({
+      fileName,
+      sizeMB: metadata && metadata.sizeMB,
+      duration: metadata && metadata.duration,
+      format: metadata && metadata.format,
+    });
+    selectRun(id);
     updateDropZoneState();
   });
 

@@ -16,6 +16,16 @@ function sendToRenderer(channel, ...args) {
   }
 }
 
+function focusMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  if (process.platform === 'darwin') {
+    app.focus({ steal: true });
+  }
+}
+
 const appDataPath = setup.getAppDataPath();
 const dbPath = path.join(appDataPath, 'transcriptions.db');
 
@@ -132,6 +142,7 @@ function startWhatsApp() {
           format: metadata.format,
         });
 
+        focusMainWindow();
         sendToRenderer('watch-transcription-started', Number(id), displayName, metadata);
         startTranscriptionRun(Number(id), filePath, cfg.command);
       } catch (err) {
@@ -174,6 +185,7 @@ async function handleWatchedFile(filePath) {
     format: metadata.format,
   });
 
+  focusMainWindow();
   sendToRenderer('watch-transcription-started', Number(id), metadata.fileName, metadata);
   startTranscriptionRun(Number(id), filePath, cfg.command);
 }
