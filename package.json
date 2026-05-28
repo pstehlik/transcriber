@@ -1,6 +1,6 @@
 {
   "name": "transcriber",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -25,7 +25,11 @@
       "notarize": true
     },
     "dmg": {
-      "title": "Transcriber"
+      "title": "Transcriber",
+      "contents": [
+        { "x": 130, "y": 220, "type": "file" },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
     }
   },
   "author": "Philip <p@pstehlik.com>",
