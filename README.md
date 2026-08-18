@@ -18,7 +18,7 @@ Python, mlx_whisper, and ffmpeg are installed automatically on first launch — 
 
 Download the DMG from [Releases](https://github.com/pstehlik/transcriber/releases), open it, and drag Transcriber to Applications.
 
-On first launch, the app creates a Python venv at `~/.transcriber/venv`, installs `mlx-whisper` and `ffmpeg`, and downloads the Whisper model (~1.5 GB). This takes 1–3 minutes.
+On first launch, the app creates a Python venv at `~/.transcriber/venv`, installs `mlx-whisper` and `ffmpeg`, and downloads the Whisper model (~1.6 GB). This takes 1–3 minutes.
 
 ## Development
 

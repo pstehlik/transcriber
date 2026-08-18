@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('whatsapp-status-change', (_event, status) => callback(status));
   },
 
+  getModels: () => ipcRenderer.invoke('get-models'),
   checkModelDownloaded: (modelId) => ipcRenderer.invoke('check-model-downloaded', modelId),
   downloadModel: (modelId) => ipcRenderer.invoke('download-model', modelId),
   onModelDownloadProgress: (callback) => {

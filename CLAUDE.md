@@ -43,6 +43,8 @@ The app is distributed as a `.dmg` and handles all Python/mlx_whisper/ffmpeg set
 - **PATH augmentation for GUI apps**: macOS GUI apps inherit a minimal PATH (no `/opt/homebrew/bin`). Both `setup.js` and `transcriber.js` prepend `/opt/homebrew/bin` and `/usr/local/bin` to the subprocess environment so Homebrew-installed tools (python3, ffmpeg) are found.
 - **WhatsApp via Baileys (unofficial protocol)**: `@whiskeysockets/baileys` implements the WhatsApp Web multi-device protocol directly over WebSocket — no headless browser needed. Requires `fetchLatestBaileysVersion()` to get the current protocol version before connecting, otherwise WhatsApp rejects with a 405. Auth credentials are persisted via `useMultiFileAuthState()` at `~/.transcriber/whatsapp-auth/`. Voice messages are downloaded, saved to `~/.transcriber/whatsapp-audio/`, and fed into the same transcription pipeline as the folder watcher.
 - **WhatsApp message filtering**: Only processes messages from individual chats (`@s.whatsapp.net`), skipping groups (`@g.us`) and status broadcasts. Only processes `audioMessage` / `pttMessage` types. Only processes incoming messages (not sent by us).
+- **Model catalog lives in `config.MODELS`**: `src/config.js` owns the list of selectable models (key → id/label/accuracy/speed/size/ram). The renderer fetches it over the `get-models` IPC and builds the settings dropdown from it, so the `<select>` in `index.html` ships empty. Adding or retiring a model is a one-file change — do not reintroduce a hardcoded model list in the renderer or HTML.
+- **Config migration on load, not on write**: `migrateModel()` in `config.js` remaps configs saved with a since-retired model (`LEGACY_MODELS`: tiny → small, medium → turbo) every time `load()` runs. It rewrites only the `--model` argument, so user customization of the rest of the command survives, and it never writes to disk — the migrated value persists only when the user saves settings. A model that is still offered is never silently changed, since a stored value for it represents a deliberate choice.
 - **Safe IPC sends via `sendToRenderer()`**: All `mainWindow.webContents.send()` calls go through a `sendToRenderer()` helper that checks `mainWindow && !mainWindow.isDestroyed()`. This prevents crashes during app shutdown when Baileys fires connection-close events after the window is already destroyed.
 
 ## First-launch setup flow
@@ -54,7 +56,7 @@ On first launch the renderer checks `setup.isSetupComplete()` (does `~/.transcri
 3. **Create venv** — `python3 -m venv ~/.transcriber/venv/`
 4. **pip install mlx-whisper** — installs MLX, numpy, whisper, and dependencies into the venv
 5. **ffmpeg check** — if ffmpeg is not on PATH (including Homebrew locations), installs `static-ffmpeg` via pip and symlinks the binary into `venv/bin/`
-6. **Model download** — downloads the default Whisper model (~1.5 GB) via `huggingface_hub.snapshot_download()` so the first transcription starts immediately without a long wait
+6. **Model download** — parses the model id out of `cfg.command` (`--model <id>`) and downloads it (~1.6 GB for the default turbo model) via `huggingface_hub.snapshot_download()` so the first transcription starts immediately without a long wait
 7. **Done** — transitions to the main app, ready to transcribe
 
 If a user already has mlx_whisper on their system PATH (e.g. installed via pip globally), the setup screen is skipped entirely.
@@ -87,7 +89,7 @@ Before tagging a release, run the full test suite (`npm run test:all`), then the
 - `src/renderer.js` — All UI logic: setup screen, drag-drop, history selection, streaming text display, config screen, WhatsApp status bar and settings UI
 - `src/setup.js` — First-launch setup: platform checks, venv creation, pip install mlx-whisper, ffmpeg install. Reports progress via callbacks. Exports `getAppDataPath()` (reads `TRANSCRIBER_DATA_DIR` env var, defaults to `~/.transcriber/`) used by all modules.
 - `src/database.js` — SQLite wrapper using sql.js (WASM); async init, writes full DB buffer to disk on each mutation. Tables: `transcriptions`
-- `src/config.js` — JSON config at `~/.transcriber/config.json`, merged with defaults on load
+- `src/config.js` — JSON config at `~/.transcriber/config.json`, merged with defaults on load. Also owns `MODELS` (the selectable-model catalog) and `migrateModel()` (remaps retired model keys)
 - `src/transcriber.js` — Spawns mlx_whisper subprocesses with venv-augmented PATH, tracks active runs in a Map, handles cancel via SIGTERM, parses stdout segments
 - `src/whatsapp.js` — WhatsApp Web client using Baileys: QR code linking, connection lifecycle with auto-reconnect, voice message detection/download, auth persistence
 - `src/watcher.js` — Watches ~/Downloads and ~/Documents for voice message files (Telegram .ogg, Signal .m4a, WhatsApp .opus) and auto-transcribes new arrivals
@@ -110,6 +112,7 @@ Before tagging a release, run the full test suite (`npm run test:all`), then the
 - `~/.transcriber/venv/` — Managed Python virtual environment (mlx-whisper, ffmpeg)
 - `~/.transcriber/whatsapp-auth/` — Baileys auth credentials (persisted across restarts, cleared on logout)
 - `~/.transcriber/whatsapp-audio/` — Downloaded WhatsApp voice messages (permanent, referenced by DB file_path)
+- `~/.cache/huggingface/hub/` — Downloaded model weights. **Global and shared, not under `TRANSCRIBER_DATA_DIR`** — `huggingface_hub` owns this path, so setting `TRANSCRIBER_DATA_DIR` isolates the venv and DB but *not* models. Override with `HF_HOME` to isolate models too. Note that `setup.isModelDownloaded()` hardcodes `os.homedir()/.cache/huggingface/hub` and therefore ignores `HF_HOME` — the "Model downloaded" indicator in Settings will be wrong for anyone who sets it.
 
 ## Database schema
 
@@ -131,10 +134,30 @@ transcriptions (
 ## Default transcription command
 
 ```
-mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbose True [INPUT_FILE]
+mlx_whisper --model mlx-community/whisper-large-v3-turbo --output-format txt --verbose True [INPUT_FILE]
 ```
 
 `[INPUT_FILE]` is replaced with the actual file path at runtime. The `--verbose True` flag is **required** for streaming output — without it, no text appears until the full transcription completes.
+
+## Model selection
+
+Three models are offered (defined in `config.MODELS`, sizes are actual repo weights from the HF API, not estimates):
+
+| Key | Hugging Face id | Size | Notes |
+|---|---|---|---|
+| `small` | `mlx-community/whisper-small-mlx` | 480 MB | Fastest; the pre-1.3.0 default |
+| `turbo` | `mlx-community/whisper-large-v3-turbo` | 1.61 GB | **Default since 1.3.0** |
+| `large` | `mlx-community/whisper-large-v3-mlx` | 3.08 GB | Highest accuracy, slowest |
+
+**Why turbo is the default** (researched 2026-08-18): large-v3-turbo is a pruned large-v3 with the decoder cut from 32 to 4 layers — 809M params, ~8× faster than large-v3, within ~0.2 WER of it, and it keeps Whisper's full ~99-language coverage. That last point matters here: this app transcribes German WhatsApp voice messages, and `small` degrades much harder on non-English audio than the English benchmark numbers suggest. `medium` was retired because turbo beats it on every axis at a comparable size.
+
+**Alternatives evaluated and rejected** — do not re-litigate these without new information:
+
+- **NVIDIA Parakeet TDT 0.6B v3** (`parakeet-mlx`) — lower WER than large-v3 (6.32% vs 7.44% on the English Open ASR Leaderboard) and far higher throughput, but its CLI **writes output only after the whole file is decoded**. That breaks the real-time streaming display, which is the core UX of this app. Also 25 European languages only, CC-BY-4.0 instead of MIT.
+- **2026 leaderboard leaders** (Cohere Transcribe 2B, IBM Granite Speech 4.1, Qwen3-ASR, Voxtral) — all beat Whisper on English WER, but none run through the `mlx_whisper` CLI. Adopting one means replacing the subprocess contract and the stdout segment parser. Cohere Transcribe has `mlx-audio` support and is the most plausible future port.
+- Sub-1-point WER gaps between top models are within benchmark noise, and the benchmarks are English-only. Language coverage and streaming support decide this choice, not leaderboard rank.
+
+**`mlx-whisper` is pinned at 0.4.3 (released Aug 2025)** and has not seen a release in about a year. It still installs and runs turbo correctly (verified via blank-install). If it becomes a problem, `mlx-audio` is where new model support is landing.
 
 ## Building and distributing
 
@@ -148,11 +171,13 @@ To distribute: send the DMG file. The recipient drags Transcriber to Application
 
 ## Testing notes
 
-- `npm test` runs 55 tests in ~10s: database (7), config (4), transcriber/parseCommand (9), watcher (20), whatsapp (13), integration (2)
-- Integration tests require `mlx_whisper` installed and the whisper-small-mlx model downloaded
+- `npm test` runs 59 tests in ~10s: database (7), config (8), transcriber/parseCommand (9), watcher (20), whatsapp (13), integration (2)
+- Integration tests are deliberately pinned to whisper-small-mlx (small download, fast run); the shipped default model is exercised by `test:e2e` and `test:blank-install`, which both read `config.load()`
 - `npm run test:e2e` runs inside Electron's Node runtime, verifying no native module issues
 - `npm run test:launch` starts the full app and verifies it doesn't crash within 5 seconds
 - `npm run test:all` chains all three for a complete verification pass
 - The database test creates and cleans up `test/test_transcriptions.db`
 - The config test creates and cleans up `test/test_config/`
 - Test audio files in `test/test_audio/` are gitignored — provide your own for local testing
+- **`test:blank-install` does not test a cold model download by default.** It isolates the venv and DB via `TRANSCRIBER_DATA_DIR`, but the HF cache is global, so an already-downloaded model is silently reused and the run looks deceptively fast. To exercise a genuine first-launch download, point the cache somewhere empty: `HF_HOME=$(mktemp -d) npm run test:blank-install`. `transcriber.js` spawns with `{...process.env}`, so `HF_HOME` reaches the subprocess.
+- **Verifying renderer UI without clicking**: `src/renderer.js` has no test harness, but its behavior can be checked by launching Electron with a throwaway script that loads the real `index.html` + `preload.js`, stubs only the IPC handlers the screen needs (`ipcMain.handle`), then drives the DOM through `win.webContents.executeJavaScript()` — click `#btn-settings`, read back the `<select>` options and the rendered command. This caught the model-dropdown wiring end-to-end when the model catalog moved to the main process.

@@ -8,6 +8,9 @@ const { startTranscription, cancelTranscription } = require('../src/transcriber'
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const TEST_AUDIO = path.join(__dirname, 'test_audio', 'test-message-1.mp3');
+// Pinned to the small model on purpose: this exercises the spawn/stream/parse
+// pipeline, not model quality, and keeps `npm test` free of a 1.6 GB download.
+// The shipped default runs in test:e2e and test:blank-install.
 const COMMAND = 'mlx_whisper --model mlx-community/whisper-small-mlx --output-format txt --verbose True [INPUT_FILE]';
 
 describe('integration: transcription', () => {

@@ -9,12 +9,8 @@
   let runStatuses = {};    // id -> 'running' | 'completed' | 'error' | 'cancelled'
   let maxParallelRuns = 3;
 
-  const MODEL_INFO = {
-    tiny:   { id: 'mlx-community/whisper-tiny-mlx',      accuracy: 'Basic',  speed: 'Fastest',  size: '75 MB',  ram: '1 GB' },
-    small:  { id: 'mlx-community/whisper-small-mlx',      accuracy: 'Good',   speed: 'Fast',     size: '500 MB', ram: '2 GB' },
-    medium: { id: 'mlx-community/whisper-medium-mlx',      accuracy: 'Strong', speed: 'Moderate', size: '1.5 GB', ram: '4 GB' },
-    large:  { id: 'mlx-community/whisper-large-v3-mlx',   accuracy: 'Best',   speed: 'Slower',   size: '3 GB',   ram: '6 GB' },
-  };
+  // Populated from config.MODELS in the main process on load.
+  let MODEL_INFO = {};
 
   // Elements
   const screenMain = document.getElementById('screen-main');
@@ -53,6 +49,17 @@
   const btnSave = document.getElementById('btn-save');
 
   // Model helpers
+  async function loadModels() {
+    MODEL_INFO = await window.api.getModels();
+    configModel.textContent = '';
+    for (const [key, info] of Object.entries(MODEL_INFO)) {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = info.label;
+      configModel.appendChild(option);
+    }
+  }
+
   function updateModelDescription(model) {
     const info = MODEL_INFO[model];
     if (!info) return;
@@ -141,11 +148,12 @@
   // Screen switching
   document.getElementById('btn-settings').addEventListener('click', async () => {
     const cfg = await window.api.getConfig();
+    await loadModels();
     configCommand.value = cfg.command;
     stepperVal = cfg.maxParallelRuns;
     stepperValue.textContent = cfg.maxParallelRuns;
     maxParallelRuns = cfg.maxParallelRuns;
-    const model = cfg.model || 'small';
+    const model = MODEL_INFO[cfg.model] ? cfg.model : Object.keys(MODEL_INFO)[0];
     configModel.value = model;
     updateModelDescription(model);
     checkModelDownloadStatus(model);

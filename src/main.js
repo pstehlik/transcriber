@@ -310,6 +310,10 @@ function setupIPC() {
     return setup.isSetupComplete();
   });
 
+  ipcMain.handle('get-models', () => {
+    return config.MODELS;
+  });
+
   ipcMain.handle('check-model-downloaded', async (_event, modelId) => {
     return setup.isModelDownloaded(modelId);
   });

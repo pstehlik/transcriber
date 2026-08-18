@@ -49,4 +49,35 @@ describe('config', () => {
     const raw = JSON.parse(fs.readFileSync(path.join(TEST_DIR, 'config.json'), 'utf-8'));
     expect(raw.maxParallelRuns).toBe(2);
   });
+
+  it('defaults to the turbo model', () => {
+    const cfg = config.load();
+    expect(cfg.model).toBe('turbo');
+    expect(cfg.command).toContain('mlx-community/whisper-large-v3-turbo');
+  });
+
+  it('migrates retired models to their replacement', () => {
+    config.save({ model: 'medium', command: 'mlx_whisper --model mlx-community/whisper-medium-mlx --verbose True [INPUT_FILE]' });
+    const cfg = config.load();
+    expect(cfg.model).toBe('turbo');
+    expect(cfg.command).toBe('mlx_whisper --model mlx-community/whisper-large-v3-turbo --verbose True [INPUT_FILE]');
+
+    config.save({ model: 'tiny', command: 'mlx_whisper --model mlx-community/whisper-tiny-mlx --verbose True [INPUT_FILE]' });
+    expect(config.load().model).toBe('small');
+  });
+
+  it('leaves a still-supported model choice untouched', () => {
+    config.save({ model: 'small', command: 'mlx_whisper --model mlx-community/whisper-small-mlx --verbose True [INPUT_FILE]' });
+    const cfg = config.load();
+    expect(cfg.model).toBe('small');
+    expect(cfg.command).toContain('whisper-small-mlx');
+  });
+
+  it('exposes a model catalog whose ids match the picker keys', () => {
+    expect(Object.keys(config.MODELS)).toEqual(['small', 'turbo', 'large']);
+    for (const info of Object.values(config.MODELS)) {
+      expect(info.id).toMatch(/^mlx-community\//);
+      expect(info.label).toBeTruthy();
+    }
+  });
 });

@@ -22,7 +22,7 @@
         <p class="setup-subtitle">Welcome! A one-time setup is needed before you can start transcribing.</p>
         <p class="setup-note">This will download and install:<br>
           &bull; MLX Whisper (speech recognition engine)<br>
-          &bull; Language model (~1.5 GB)<br>
+          &bull; Language model (~1.6 GB)<br>
           &bull; ffmpeg (audio processing, if not already installed)<br><br>
           Depending on your internet speed, this takes 2&ndash;5 minutes.<br>
           All processing stays on your Mac &mdash; nothing is uploaded.<br><br>
@@ -190,12 +190,8 @@
         <div class="form-group">
           <label class="form-label">Transcription Accuracy</label>
           <div class="form-help" style="margin-top: 0; margin-bottom: 8px;">Which model do you want to use for audio transcription?</div>
-          <select class="form-select" id="config-model">
-            <option value="tiny">Tiny</option>
-            <option value="small" selected>Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
-          </select>
+          <!-- Options are populated from the model catalog in src/config.js -->
+          <select class="form-select" id="config-model"></select>
           <div class="model-info" id="model-info"></div>
           <div class="model-download" id="model-download" style="display: none;">
             <button class="btn-download" id="btn-download-model">Download Model Now</button>
