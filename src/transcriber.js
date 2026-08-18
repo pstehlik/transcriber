@@ -26,8 +26,68 @@ function checkInstalled() {
   });
 }
 
-function startTranscription(id, filePath, command, callbacks) {
+const SEGMENT_RE = /\[(\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}\.\d{3})\]\s*(.*)/;
+
+// Parses one `--verbose True` stdout line into a segment, or null if the line
+// is ordinary log output.
+//
+// `degenerate` marks a segment whose start and end are identical. Whisper can
+// fall into a repetition loop at the end of a file: the seek position stops
+// advancing and it re-decodes the same instant over and over, emitting dozens
+// of copies of the last phrase (e.g. 79x "Ciao." on a 94s voice message). A
+// zero-duration segment spans no audio, so it cannot be speech. Turbo's 4-layer
+// decoder loops far more readily than the deeper models. Suppressing it via
+// decoding flags was measured to be worse: --condition-on-previous-text False
+// fragments the text and introduces errors, and --word-timestamps True changes
+// transcribed words. Dropping the degenerate segments here costs nothing.
+function parseSegmentLine(line) {
+  const match = line.match(SEGMENT_RE);
+  if (!match) return null;
+  const [, start, end, text] = match;
+  const [mins, secs] = start.split(':');
+  return {
+    start,
+    end,
+    startSeconds: Number(mins) * 60 + Number(secs),
+    text: text.trim(),
+    degenerate: start === end,
+  };
+}
+
+// How many consecutive segments with identical text to keep. 1 collapses a
+// repeated run down to a single copy. Raise to 2 to let genuine doubling
+// ("Ciao. Ciao.") through at the cost of leaving more loop output in place.
+const MAX_CONSECUTIVE_IDENTICAL = 1;
+
+// Builds a stateful predicate deciding whether a parsed segment is real speech.
+// Rejects three kinds of Whisper repetition-loop output:
+//   1. zero-duration segments (see parseSegmentLine)
+//   2. segments starting at or after the end of the audio — Whisper pads the
+//      final 30s window with zeros and can decode into the padding, e.g. a 63s
+//      file emitting segments out to 01:21
+//   3. consecutive segments repeating text already emitted (see
+//      MAX_CONSECUTIVE_IDENTICAL)
+// durationSeconds may be null when the audio length is unknown; rule 2 is then
+// skipped rather than guessed at.
+function createSegmentFilter(durationSeconds) {
+  let lastText = null;
+  let repeats = 0;
+  return function accept(segment) {
+    if (segment.degenerate || !segment.text) return false;
+    if (durationSeconds != null && segment.startSeconds >= durationSeconds) return false;
+    if (segment.text === lastText) {
+      repeats++;
+      return repeats < MAX_CONSECUTIVE_IDENTICAL;
+    }
+    lastText = segment.text;
+    repeats = 0;
+    return true;
+  };
+}
+
+function startTranscription(id, filePath, command, callbacks, durationSeconds = null) {
   const { onSegment, onLog, onError, onComplete } = callbacks;
+  const acceptSegment = createSegmentFilter(durationSeconds);
 
   const parts = parseCommand(command, filePath);
   const cmd = parts[0];
@@ -48,18 +108,20 @@ function startTranscription(id, filePath, command, callbacks) {
   activeRuns.set(id, proc);
 
   let fullText = '';
+  let droppedSegments = 0;
 
   proc.stdout.on('data', (data) => {
     const lines = data.toString().split('\n');
     for (const line of lines) {
       if (!line.trim()) continue;
-      const match = line.match(/\[\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}\.\d{3}\]\s*(.*)/);
-      if (match) {
-        const segmentText = match[1].trim();
-        if (segmentText) {
-          fullText += (fullText ? ' ' : '') + segmentText;
-          onSegment?.(segmentText, fullText);
+      const segment = parseSegmentLine(line);
+      if (segment) {
+        if (!acceptSegment(segment)) {
+          droppedSegments++;
+          continue;
         }
+        fullText += (fullText ? ' ' : '') + segment.text;
+        onSegment?.(segment.text, fullText);
       } else {
         onLog?.('info', line.trim());
       }
@@ -75,6 +137,9 @@ function startTranscription(id, filePath, command, callbacks) {
 
   proc.on('close', (code) => {
     activeRuns.delete(id);
+    if (droppedSegments > 0) {
+      onLog?.('warn', `Dropped ${droppedSegments} segment(s) from a model repetition loop (zero-length, repeated, or past end of audio)`);
+    }
     if (code === 0) {
       onComplete?.(fullText);
     } else if (code === null) {
@@ -149,4 +214,6 @@ module.exports = {
   cancelTranscription,
   getActiveCount,
   parseCommand,
+  parseSegmentLine,
+  createSegmentFilter,
 };

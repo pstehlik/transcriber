@@ -63,11 +63,15 @@ async function getFileMetadata(filePath) {
     const sizeMB = (stat.size / (1024 * 1024)).toFixed(1);
 
     let duration = null;
+    let durationSeconds = null;
     try {
       const mm = await import('music-metadata');
-      const metadata = await mm.parseFile(filePath);
+      // { duration: true } is required for Ogg/Opus (WhatsApp voice notes), whose
+      // headers carry no duration; it scans the file and costs ~10ms.
+      const metadata = await mm.parseFile(filePath, { duration: true });
       if (metadata.format.duration) {
-        const secs = Math.round(metadata.format.duration);
+        durationSeconds = metadata.format.duration;
+        const secs = Math.round(durationSeconds);
         const mins = Math.floor(secs / 60);
         const rem = secs % 60;
         duration = `${mins}:${String(rem).padStart(2, '0')}`;
@@ -76,13 +80,13 @@ async function getFileMetadata(filePath) {
       // Duration not available
     }
 
-    return { filePath, fileName, fileSize: stat.size, sizeMB, duration, format: ext };
+    return { filePath, fileName, fileSize: stat.size, sizeMB, duration, durationSeconds, format: ext };
   } catch (err) {
     return { error: err.message };
   }
 }
 
-function startTranscriptionRun(id, filePath, command) {
+function startTranscriptionRun(id, filePath, command, durationSeconds = null) {
   transcriber.startTranscription(id, filePath, command, {
     onSegment(segmentText) {
       database.appendText(dbPath, id, (segmentText ? ' ' : '') + segmentText);
@@ -100,7 +104,7 @@ function startTranscriptionRun(id, filePath, command) {
       sendToRenderer('transcription-complete', id, finalStatus);
       processPendingWatchFiles();
     },
-  });
+  }, durationSeconds);
 }
 
 function startWhatsApp() {
@@ -144,7 +148,7 @@ function startWhatsApp() {
 
         focusMainWindow();
         sendToRenderer('watch-transcription-started', Number(id), displayName, metadata);
-        startTranscriptionRun(Number(id), filePath, cfg.command);
+        startTranscriptionRun(Number(id), filePath, cfg.command, metadata.durationSeconds);
       } catch (err) {
         console.error('WhatsApp transcription error:', err);
       }
@@ -187,7 +191,7 @@ async function handleWatchedFile(filePath) {
 
   focusMainWindow();
   sendToRenderer('watch-transcription-started', Number(id), metadata.fileName, metadata);
-  startTranscriptionRun(Number(id), filePath, cfg.command);
+  startTranscriptionRun(Number(id), filePath, cfg.command, metadata.durationSeconds);
 }
 
 function processPendingWatchFiles() {
@@ -236,7 +240,7 @@ function setupIPC() {
       format: metadata.format,
     });
 
-    startTranscriptionRun(Number(id), filePath, cfg.command);
+    startTranscriptionRun(Number(id), filePath, cfg.command, metadata.durationSeconds);
 
     return { id: Number(id) };
   });

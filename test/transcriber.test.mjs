@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
-const { parseCommand, checkInstalled, getActiveCount } = require('../src/transcriber');
+const { parseCommand, checkInstalled, getActiveCount, parseSegmentLine, createSegmentFilter } = require('../src/transcriber');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('transcriber', () => {
@@ -64,6 +64,81 @@ describe('transcriber', () => {
   describe('getActiveCount', () => {
     it('returns 0 when no runs are active', () => {
       expect(getActiveCount()).toBe(0);
+    });
+  });
+
+  describe('parseSegmentLine', () => {
+    it('parses a normal segment into start, end and text', () => {
+      const seg = parseSegmentLine('[00:00.000 --> 00:09.360]  Mein Lieber, es ist untergegangen.');
+      expect(seg).not.toBeNull();
+      expect(seg.text).toBe('Mein Lieber, es ist untergegangen.');
+      expect(seg.start).toBe('00:00.000');
+      expect(seg.end).toBe('00:09.360');
+      expect(seg.degenerate).toBe(false);
+    });
+
+    it('flags a zero-duration segment as degenerate', () => {
+      // mlx_whisper emits these in an end-of-audio repetition loop: the seek
+      // position stops advancing and the same span is decoded over and over.
+      const seg = parseSegmentLine('[01:34.840 --> 01:34.840]  Ciao.');
+      expect(seg).not.toBeNull();
+      expect(seg.text).toBe('Ciao.');
+      expect(seg.degenerate).toBe(true);
+    });
+
+    it('returns null for non-segment output lines', () => {
+      expect(parseSegmentLine('Detected language: German')).toBeNull();
+      expect(parseSegmentLine('')).toBeNull();
+    });
+
+    it('keeps a legitimate short segment that has real duration', () => {
+      const seg = parseSegmentLine('[01:32.460 --> 01:33.400]  Ciao, ciao.');
+      expect(seg.degenerate).toBe(false);
+    });
+  });
+
+  describe('createSegmentFilter', () => {
+    const seg = (start, end, text) => parseSegmentLine(`[${start} --> ${end}]  ${text}`);
+
+    it('rejects zero-length segments', () => {
+      const accept = createSegmentFilter(94);
+      expect(accept(seg('01:34.840', '01:34.840', 'Ciao.'))).toBe(false);
+    });
+
+    it('rejects segments that start at or after the end of the audio', () => {
+      // 63s test file produced segments running to 01:21 -- hallucinated into
+      // Whisper's zero-padded final window, where no audio exists.
+      const accept = createSegmentFilter(63.05);
+      expect(accept(seg('01:11.460', '01:12.460', 'Schuetzende Kleidung.'))).toBe(false);
+    });
+
+    it('keeps segments inside the audio', () => {
+      const accept = createSegmentFilter(63.05);
+      expect(accept(seg('00:10.000', '00:12.000', 'Echte Sprache.'))).toBe(true);
+    });
+
+    it('collapses a run of consecutive identical segments to one', () => {
+      const accept = createSegmentFilter(120);
+      expect(accept(seg('00:10.000', '00:11.000', 'Ciao.'))).toBe(true);
+      expect(accept(seg('00:11.000', '00:12.000', 'Ciao.'))).toBe(false);
+      expect(accept(seg('00:12.000', '00:13.000', 'Ciao.'))).toBe(false);
+    });
+
+    it('resets the repeat counter when the text changes', () => {
+      const accept = createSegmentFilter(120);
+      accept(seg('00:10.000', '00:11.000', 'Ja.'));
+      expect(accept(seg('00:11.000', '00:12.000', 'Ja.'))).toBe(false);
+      expect(accept(seg('00:13.000', '00:14.000', 'Nein.'))).toBe(true);
+      expect(accept(seg('00:14.000', '00:15.000', 'Ja.'))).toBe(true);
+    });
+
+    it('applies no duration rule when the duration is unknown', () => {
+      const accept = createSegmentFilter(null);
+      expect(accept(seg('09:59.000', '09:59.500', 'Immer noch Sprache.'))).toBe(true);
+    });
+
+    it('parses segment start into seconds', () => {
+      expect(parseSegmentLine('[01:11.460 --> 01:12.460]  x').startSeconds).toBeCloseTo(71.46, 3);
     });
   });
 });
