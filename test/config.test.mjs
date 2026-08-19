@@ -80,4 +80,47 @@ describe('config', () => {
       expect(info.label).toBeTruthy();
     }
   });
+
+  describe('parseModelId', () => {
+    it('extracts the model repo id from a command', () => {
+      expect(config.parseModelId('mlx_whisper --model mlx-community/whisper-small-mlx --verbose True [INPUT_FILE]'))
+        .toBe('mlx-community/whisper-small-mlx');
+    });
+
+    it('returns null when the command has no --model argument', () => {
+      expect(config.parseModelId('mlx_whisper --verbose True [INPUT_FILE]')).toBeNull();
+    });
+  });
+
+  describe('validateCommand', () => {
+    it('accepts the default command and marks its model as known', () => {
+      const result = config.validateCommand(config.DEFAULTS.command);
+      expect(result).toEqual({
+        ok: true,
+        modelId: 'mlx-community/whisper-large-v3-turbo',
+        known: true,
+      });
+    });
+
+    it('rejects a command without the [INPUT_FILE] placeholder', () => {
+      const result = config.validateCommand('mlx_whisper --model mlx-community/whisper-small-mlx');
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain('[INPUT_FILE]');
+    });
+
+    it('rejects a command without a --model argument', () => {
+      const result = config.validateCommand('mlx_whisper --verbose True [INPUT_FILE]');
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain('--model');
+    });
+
+    it('accepts a model outside the catalog but marks it unknown', () => {
+      const result = config.validateCommand('mlx_whisper --model mlx-community/whisper-high-mlx [INPUT_FILE]');
+      expect(result).toEqual({
+        ok: true,
+        modelId: 'mlx-community/whisper-high-mlx',
+        known: false,
+      });
+    });
+  });
 });

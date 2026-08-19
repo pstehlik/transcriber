@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
-const { parseCommand, checkInstalled, getActiveCount, parseSegmentLine, createSegmentFilter } = require('../src/transcriber');
+const { parseCommand, checkInstalled, getActiveCount, parseSegmentLine, createSegmentFilter, describeFailure } = require('../src/transcriber');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('transcriber', () => {
@@ -139,6 +139,33 @@ describe('transcriber', () => {
 
     it('parses segment start into seconds', () => {
       expect(parseSegmentLine('[01:11.460 --> 01:12.460]  x').startSeconds).toBeCloseTo(71.46, 3);
+    });
+  });
+
+  describe('describeFailure', () => {
+    const SKIP_LINE =
+      'Skipping /Users/me/Downloads/WhatsApp Ptt 2026-08-12 at 13.59.37.ogg due to ' +
+      'RepositoryNotFoundError: 401 Client Error. Repository Not Found for url: ' +
+      'https://huggingface.co/api/models/mlx-community/whisper-high-mlx/revision/main.';
+
+    it('returns null for ordinary log output', () => {
+      expect(describeFailure('Detected language: German', 'mlx-community/whisper-small-mlx')).toBeNull();
+    });
+
+    it('names the missing model and how to fix it when the model repo does not exist', () => {
+      const message = describeFailure(SKIP_LINE, 'mlx-community/whisper-high-mlx');
+      expect(message).toContain('mlx-community/whisper-high-mlx');
+      expect(message).toContain('Settings');
+    });
+
+    it('still explains the failure when the model id is unknown', () => {
+      const message = describeFailure(SKIP_LINE, null);
+      expect(message).toContain('Settings');
+    });
+
+    it('reports other mlx_whisper failures with their error type', () => {
+      const message = describeFailure('Skipping /tmp/a.ogg due to FileNotFoundError: no such file', 'mlx-community/whisper-small-mlx');
+      expect(message).toContain('FileNotFoundError');
     });
   });
 });

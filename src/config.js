@@ -43,6 +43,37 @@ const DEFAULTS = {
   model: 'turbo',
 };
 
+const MODEL_ARG_RE = /--model\s+(\S+)/;
+
+const KNOWN_MODEL_IDS = new Set(Object.values(MODELS).map((m) => m.id));
+
+// Pulls the Hugging Face repo id out of a transcription command.
+function parseModelId(command) {
+  const match = String(command || '').match(MODEL_ARG_RE);
+  return match ? match[1] : null;
+}
+
+// Checks that a transcription command can actually run, before it is saved.
+// `known` is false for a model outside the catalog: that is still allowed, since
+// any real MLX Whisper repo works, but the caller is expected to verify the repo
+// exists first. A mistyped repo id is otherwise only discovered at transcription
+// time, where Hugging Face reports it as a 401 and the run silently produces
+// nothing (see describeFailure in transcriber.js).
+function validateCommand(command) {
+  const text = String(command || '').trim();
+  if (!text) {
+    return { ok: false, error: 'The transcription command cannot be empty.' };
+  }
+  if (!text.includes('[INPUT_FILE]')) {
+    return { ok: false, error: 'The command must contain the [INPUT_FILE] placeholder.' };
+  }
+  const modelId = parseModelId(text);
+  if (!modelId) {
+    return { ok: false, error: 'The command must select a model with --model <id>.' };
+  }
+  return { ok: true, modelId, known: KNOWN_MODEL_IDS.has(modelId) };
+}
+
 let configPath = null;
 
 function init(appDataPath) {
@@ -57,7 +88,7 @@ function migrateModel(cfg) {
   return {
     ...cfg,
     model: replacement,
-    command: cfg.command.replace(/--model\s+\S+/, `--model ${MODELS[replacement].id}`),
+    command: cfg.command.replace(MODEL_ARG_RE, `--model ${MODELS[replacement].id}`),
   };
 }
 
@@ -79,4 +110,4 @@ function save(settings) {
   return merged;
 }
 
-module.exports = { init, load, save, DEFAULTS, MODELS };
+module.exports = { init, load, save, DEFAULTS, MODELS, parseModelId, validateCommand };

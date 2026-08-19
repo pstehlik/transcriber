@@ -172,6 +172,26 @@ function isModelDownloaded(modelId) {
   }
 }
 
+const HUB_TIMEOUT_MS = 5000;
+
+// Asks the Hugging Face API whether a model repo exists. Hugging Face answers
+// 401 rather than 404 for a repo that is not there (so it cannot be used to
+// probe for private repos), which is why a mistyped model id reaches the user as
+// "Invalid username or password". Anything other than a definitive answer is
+// 'unknown', so a user without network access is never blocked from saving.
+async function modelExistsOnHub(modelId) {
+  try {
+    const response = await fetch(`https://huggingface.co/api/models/${modelId}`, {
+      signal: AbortSignal.timeout(HUB_TIMEOUT_MS),
+    });
+    if (response.status === 200) return 'exists';
+    if (response.status === 401 || response.status === 404) return 'missing';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 async function downloadModel(modelId, onProgress) {
   onProgress?.(`Downloading model ${modelId}...`);
   const pythonBin = path.join(getVenvBinPath(), 'python3');
@@ -181,4 +201,4 @@ async function downloadModel(modelId, onProgress) {
   onProgress?.('Model downloaded.');
 }
 
-module.exports = { getAppDataPath, getVenvBinPath, isSetupComplete, runSetup, isModelDownloaded, downloadModel };
+module.exports = { getAppDataPath, getVenvBinPath, isSetupComplete, runSetup, isModelDownloaded, modelExistsOnHub, downloadModel };

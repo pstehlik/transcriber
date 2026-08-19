@@ -2,6 +2,7 @@ const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const setup = require('./setup');
+const config = require('./config');
 
 const activeRuns = new Map();
 
@@ -85,6 +86,29 @@ function createSegmentFilter(durationSeconds) {
   };
 }
 
+// mlx_whisper's CLI wraps each file in `try/except Exception`, prints
+// "Skipping <file> due to <ErrorType>: <detail>" and still exits 0. Without
+// this, a run that transcribed nothing is recorded as completed with an empty
+// transcript, and the only clue is a Python traceback in the log.
+const SKIP_RE = /^Skipping .+ due to (\w+):\s*(.*)$/;
+
+// Turns that skip line into something the user can act on, or null for ordinary
+// log output. A missing model repo is by far the most common cause: Hugging Face
+// answers 401 for a repo that does not exist, so the raw log claims an
+// authentication problem when the real fault is the model name in Settings.
+function describeFailure(line, modelId) {
+  const match = line.trim().match(SKIP_RE);
+  if (!match) return null;
+  const [, errorType, detail] = match;
+  if (errorType === 'RepositoryNotFoundError') {
+    const name = modelId ? `"${modelId}"` : 'The configured model';
+    return `${name} is not a model on Hugging Face, so nothing could be transcribed. ` +
+      'Open Settings, pick a model from the list (this rewrites the --model argument), ' +
+      'save, and run this file again.';
+  }
+  return `mlx_whisper could not transcribe this file — ${errorType}: ${detail}`;
+}
+
 function startTranscription(id, filePath, command, callbacks, durationSeconds = null) {
   const { onSegment, onLog, onError, onComplete } = callbacks;
   const acceptSegment = createSegmentFilter(durationSeconds);
@@ -109,6 +133,8 @@ function startTranscription(id, filePath, command, callbacks, durationSeconds = 
 
   let fullText = '';
   let droppedSegments = 0;
+  let failureReason = null;
+  const modelId = config.parseModelId(command);
 
   proc.stdout.on('data', (data) => {
     const lines = data.toString().split('\n');
@@ -124,6 +150,11 @@ function startTranscription(id, filePath, command, callbacks, durationSeconds = 
         onSegment?.(segment.text, fullText);
       } else {
         onLog?.('info', line.trim());
+        const failure = describeFailure(line, modelId);
+        if (failure) {
+          failureReason = failure;
+          onLog?.('error', failure);
+        }
       }
     }
   });
@@ -140,7 +171,11 @@ function startTranscription(id, filePath, command, callbacks, durationSeconds = 
     if (droppedSegments > 0) {
       onLog?.('warn', `Dropped ${droppedSegments} segment(s) from a model repetition loop (zero-length, repeated, or past end of audio)`);
     }
-    if (code === 0) {
+    if (code === 0 && failureReason) {
+      // mlx_whisper swallowed the error and exited 0; do not call this a success.
+      onError?.(failureReason);
+      onComplete?.(fullText, 'error');
+    } else if (code === 0) {
       onComplete?.(fullText);
     } else if (code === null) {
       onLog?.('warn', 'Transcription cancelled');
@@ -209,6 +244,7 @@ function parseCommand(command, filePath) {
 }
 
 module.exports = {
+  describeFailure,
   checkInstalled,
   startTranscription,
   cancelTranscription,

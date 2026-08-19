@@ -108,6 +108,7 @@
   }
 
   configModel.addEventListener('change', () => {
+    setConfigStatus(null, '');
     const model = configModel.value;
     updateModelDescription(model);
     updateCommandModel(model);
@@ -147,6 +148,7 @@
 
   // Screen switching
   document.getElementById('btn-settings').addEventListener('click', async () => {
+    setConfigStatus(null, '');
     const cfg = await window.api.getConfig();
     await loadModels();
     configCommand.value = cfg.command;
@@ -198,20 +200,44 @@
   });
 
   // Save config
+  const configStatus = document.getElementById('config-status');
   let saveTimeout;
+
+  function setConfigStatus(kind, message) {
+    configStatus.className = 'config-status' + (kind ? ' ' + kind : '');
+    configStatus.textContent = message || '';
+  }
+
   btnSave.addEventListener('click', async () => {
-    await window.api.saveConfig({
-      command: configCommand.value,
-      maxParallelRuns: stepperVal,
-      model: configModel.value,
-    });
+    clearTimeout(saveTimeout);
+    setConfigStatus(null, '');
+    btnSave.disabled = true;
+    btnSave.textContent = 'Saving...';
+
+    let result;
+    try {
+      result = await window.api.saveConfig({
+        command: configCommand.value,
+        maxParallelRuns: stepperVal,
+        model: configModel.value,
+      });
+    } finally {
+      btnSave.disabled = false;
+      btnSave.textContent = 'Save';
+    }
+
+    // A rejected command is never written; the screen stays open so it can be fixed.
+    if (result?.error) {
+      setConfigStatus('error', result.error);
+      return;
+    }
+    if (result?.warning) setConfigStatus('warning', result.warning);
+
     maxParallelRuns = stepperVal;
-    const orig = btnSave.textContent;
     btnSave.textContent = 'Saved!';
     btnSave.style.background = '#34c759';
-    clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
-      btnSave.textContent = orig;
+      btnSave.textContent = 'Save';
       btnSave.style.background = '';
     }, 1200);
   });

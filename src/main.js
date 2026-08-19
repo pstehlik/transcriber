@@ -265,8 +265,32 @@ function setupIPC() {
     return config.load();
   });
 
+  // Settings are only written once the command is known to be runnable. A model
+  // outside the catalog is checked against Hugging Face, since a mistyped repo id
+  // otherwise fails at transcription time as an opaque 401.
   ipcMain.handle('save-config', async (_event, settings) => {
-    return config.save(settings);
+    if (typeof settings.command === 'string') {
+      const validation = config.validateCommand(settings.command);
+      if (!validation.ok) return { error: validation.error };
+
+      if (!validation.known) {
+        const existence = await setup.modelExistsOnHub(validation.modelId);
+        if (existence === 'missing') {
+          return {
+            error: `"${validation.modelId}" is not a model on Hugging Face. ` +
+              'Pick a model above, or correct the name in the command.',
+          };
+        }
+        if (existence === 'unknown') {
+          return {
+            config: config.save(settings),
+            warning: `Could not reach Hugging Face to check "${validation.modelId}". ` +
+              'Saved as-is — if the model does not exist, transcription will fail.',
+          };
+        }
+      }
+    }
+    return { config: config.save(settings) };
   });
 
   ipcMain.handle('toggle-watch', async (_event, enabled) => {

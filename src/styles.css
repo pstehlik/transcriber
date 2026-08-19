@@ -439,6 +439,10 @@ html, body {
 .log-level.error { color: var(--danger); }
 .log-msg { color: var(--text-secondary); word-break: break-word; }
 
+.config-status { margin-top: 10px; font-size: 12px; line-height: 1.5; display: none; }
+.config-status.error { display: block; color: var(--danger); }
+.config-status.warning { display: block; color: var(--warning); }
+
 /* Transcription Area */
 .transcription-area {
   flex: 1;

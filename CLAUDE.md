@@ -48,6 +48,9 @@ The app is distributed as a `.dmg` and handles all Python/mlx_whisper/ffmpeg set
 - **WhatsApp message filtering**: Only processes messages from individual chats (`@s.whatsapp.net`), skipping groups (`@g.us`) and status broadcasts. Only processes `audioMessage` / `pttMessage` types. Only processes incoming messages (not sent by us).
 - **Model catalog lives in `config.MODELS`**: `src/config.js` owns the list of selectable models (key → id/label/accuracy/speed/size/ram). The renderer fetches it over the `get-models` IPC and builds the settings dropdown from it, so the `<select>` in `index.html` ships empty. Adding or retiring a model is a one-file change — do not reintroduce a hardcoded model list in the renderer or HTML.
 - **Config migration on load, not on write**: `migrateModel()` in `config.js` remaps configs saved with a since-retired model (`LEGACY_MODELS`: tiny → small, medium → turbo) every time `load()` runs. It rewrites only the `--model` argument, so user customization of the rest of the command survives, and it never writes to disk — the migrated value persists only when the user saves settings. A model that is still offered is never silently changed, since a stored value for it represents a deliberate choice.
+- **The command is validated before it is saved, not when it runs**: the Transcription Command textarea is free-form, so a hand-edited `--model` can name a repo that does not exist (a real user shipped `mlx-community/whisper-high-mlx`). `config.validateCommand()` requires `[INPUT_FILE]` and a `--model <id>`; the `save-config` handler in `main.js` then rejects the save outright if the id is outside `MODELS` **and** `setup.modelExistsOnHub()` says Hugging Face does not have it. Catalog ids skip the network entirely, a real-but-unlisted repo (e.g. `whisper-large-v2-mlx`) still saves, and an unreachable Hub saves with a warning rather than locking anyone out. `save-config` returns `{ config }`, `{ config, warning }`, or `{ error }` — not a bare config object.
+- **Hugging Face answers 401, not 404, for a repo that does not exist** (so the API cannot be used to probe for private repos). A mistyped model id therefore surfaces to the user as `RepositoryNotFoundError: 401 … Invalid username or password`, which reads like an auth failure and is not one. Both `modelExistsOnHub()` and `describeFailure()` exist to translate that.
+- **`mlx_whisper` exits 0 after a failed file**: its CLI wraps each file in `try/except Exception`, prints `Skipping <file> due to <ErrorType>: <detail>`, and returns success, so a run that transcribed nothing used to be stored as `completed` with empty text. `describeFailure()` in `transcriber.js` matches that line, logs an actionable `error`-level message (which auto-expands the log panel), and the `close` handler finishes the run as `error` even on exit code 0.
 - **Safe IPC sends via `sendToRenderer()`**: All `mainWindow.webContents.send()` calls go through a `sendToRenderer()` helper that checks `mainWindow && !mainWindow.isDestroyed()`. This prevents crashes during app shutdown when Baileys fires connection-close events after the window is already destroyed.
 
 ## First-launch setup flow
@@ -100,7 +103,7 @@ Before tagging a release, run the full test suite (`npm run test:all`), then the
 - `build/icon.icns` — macOS app icon (generated from `assets/picsvg_download.svg`)
 - `build/entitlements.mac.plist` — macOS entitlements for hardened runtime (JIT, unsigned memory, dyld env vars)
 - `assets/` — Source SVG for the app icon
-- `test/*.test.mjs` — Unit tests for database, config, transcriber, watcher, whatsapp + integration test (real mlx_whisper)
+- `test/*.test.mjs` — Unit tests for database, config, setup, transcriber, watcher, whatsapp + integration test (real mlx_whisper)
 - `test/e2e-smoke.js` — Full e2e test that runs inside Electron
 - `test/test-blank-install.js` — Pre-release: creates temp dir, runs full setup, transcribes, cleans up
 - `test/test-dmg.sh` — Pre-release: mounts built DMG, launches with isolated data dir, verifies no crash
@@ -174,7 +177,7 @@ To distribute: send the DMG file. The recipient drags Transcriber to Application
 
 ## Testing notes
 
-- `npm test` runs 70 tests in ~10s: database (7), config (8), transcriber (20), watcher (20), whatsapp (13), integration (2)
+- `npm test` runs 85 tests in ~10s: database (7), config (14), setup (5), transcriber (24), watcher (20), whatsapp (13), integration (2)
 - Integration tests are deliberately pinned to whisper-small-mlx (small download, fast run); the shipped default model is exercised by `test:e2e` and `test:blank-install`, which both read `config.load()`
 - `npm run test:e2e` runs inside Electron's Node runtime, verifying no native module issues
 - `npm run test:launch` starts the full app and verifies it doesn't crash within 5 seconds
